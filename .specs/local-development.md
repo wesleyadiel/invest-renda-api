@@ -18,7 +18,7 @@ sua máquina.
 ## Opção A — tudo via Docker (Postgres + Redis + RabbitMQ + a própria API)
 
 ```bash
-./docker/run.sh
+./run.sh
 ```
 
 Um único comando: sobe as dependências (`docker/docker-compose.yml`),
@@ -34,11 +34,11 @@ do acompanhamento de logs — os containers continuam rodando.
 Outros comandos do script:
 
 ```bash
-./docker/run.sh deps     # sobe só as dependências (ver Opção B abaixo)
-./docker/run.sh status   # mostra o painel de saúde uma vez e sai
-./docker/run.sh logs     # só segue os logs da API
-./docker/run.sh down     # derruba tudo (mantém os dados do Postgres)
-./docker/run.sh down -v  # derruba tudo e apaga os dados do Postgres também
+./run.sh deps     # sobe só as dependências (ver Opção B abaixo)
+./run.sh status   # mostra o painel de saúde uma vez e sai
+./run.sh logs     # só segue os logs da API
+./run.sh down     # derruba tudo (mantém os dados do Postgres)
+./run.sh down -v  # derruba tudo e apaga os dados do Postgres também
 ```
 
 A API fica em `http://localhost:8080` (ver URLs completas no resumo que o
@@ -55,7 +55,7 @@ etc.).
 ### 1. Subir só a infraestrutura
 
 ```bash
-./docker/run.sh deps
+./run.sh deps
 # ou diretamente:
 docker compose -f docker/docker-compose.yml up -d
 ```
@@ -137,8 +137,8 @@ docker compose -f docker/docker-compose.yml down -v       # apaga também os dad
   está na porta. Na Opção B, suba com `--server.port=<outra>` em vez de
   matar processos que não sejam seus. Na Opção A (Docker), pare quem estiver
   usando 8080 ou mude o mapeamento de porta (`-p`) do `docker run` da API em
-  `docker/run.sh`.
-- **`docker/run.sh` trava esperando o `invest-renda-api` ficar saudável**:
+  `run.sh`.
+- **`run.sh` trava esperando o `invest-renda-api` ficar saudável**:
   normalmente é a aplicação não conseguindo conectar em `postgres`/`redis`/
   `rabbitmq` (nomes de serviço, não `localhost`, dentro da rede do Compose).
   O próprio script imprime os últimos logs do container automaticamente

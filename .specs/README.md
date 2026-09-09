@@ -13,7 +13,7 @@ Leia nesta ordem:
 5. [`messaging.md`](./messaging.md) — fila RabbitMQ e o fluxo de aplicação.
 6. [`database.md`](./database.md) — schema e migrations.
 7. [`local-development.md`](./local-development.md) — como rodar o projeto.
-8. [`docker.md`](./docker.md) — Dockerfile da API e o script `docker/run.sh`.
+8. [`docker.md`](./docker.md) — Dockerfile da API e o script `run.sh`.
 9. [`testing.md`](./testing.md) — estratégia de testes.
 10. [`web-frontend.md`](./web-frontend.md) — front-end Angular de validação (`invest-renda-web`) e os endpoints que existem por causa dele.
 11. [`decisions.md`](./decisions.md) — decisões de arquitetura e os porquês.

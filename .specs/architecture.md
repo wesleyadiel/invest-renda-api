@@ -19,7 +19,7 @@
 | Resiliência (chamadas externas) | Resilience4j (retry com backoff exponencial + circuit breaker) |
 | Build           | Maven (via Maven Wrapper, `./mvnw` — não exige Maven pré-instalado) |
 | Testes          | JUnit 5 + Mockito + AssertJ (unitários, sem infraestrutura) |
-| Containerização | Docker multi-stage build (`docker/Dockerfile`) + Docker Compose |
+| Containerização | Docker multi-stage build (`Dockerfile` na raiz) + Docker Compose |
 
 Todas essas escolhas foram decisões explícitas — veja o porquê de cada uma em
 [`decisions.md`](./decisions.md).
@@ -67,9 +67,9 @@ lado de escrita).
 ```
 invest-renda-api/
 ├── Dockerfile                   # build multi-estagio da API (Maven -> JRE) - imagem para implantar a API
+├── run.sh                       # orquestra tudo via Docker com painel visual de progresso
 ├── docker/
-│   ├── docker-compose.yml      # dependencias: Postgres, Redis, RabbitMQ (NAO a API)
-│   └── run.sh                  # orquestra tudo via Docker com painel visual de progresso
+│   └── docker-compose.yml      # dependencias: Postgres, Redis, RabbitMQ (NAO a API)
 ├── pom.xml
 ├── .specs/                     # esta documentação
 └── src/

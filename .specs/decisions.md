@@ -311,7 +311,7 @@ produção. `docker/docker-compose.yml` é só o suporte de infraestrutura para
 desenvolvimento local (banco, fila, cache) — nunca inclui a API. Isso evita
 confundir "a imagem que a gente implanta" com "o ambiente de dependências
 que a gente sobe pra desenvolver localmente", que são preocupações
-diferentes mesmo que ambas usem Docker. `docker/run.sh` conhece os dois e
+diferentes mesmo que ambas usem Docker. `run.sh` conhece os dois e
 orquestra ambos, mas o `Dockerfile` em si não depende do compose nem
 vice-versa — dá pra buildar a imagem da API (`docker build -t
 invest-renda-api .`) sem nunca ter subido `docker/docker-compose.yml`.
@@ -328,12 +328,22 @@ default, valendo sem mudança nenhuma tanto para quem roda a API direto na
 máquina (Opção B) quanto para o container (Opção A). Detalhes em
 [`docker.md`](./docker.md).
 
+**`run.sh` na raiz, não em `docker/`**: o script orquestra tanto o
+`Dockerfile` (raiz) quanto `docker/docker-compose.yml` — ficar dentro de
+`docker/` sugeriria que ele é só sobre as dependências, quando na verdade
+`./run.sh` (sem argumento) builda e roda a própria API também. Ficar na
+raiz deixa claro, só pelo caminho, que é o ponto de entrada único do
+projeto ("clonou, tem Docker, roda `./run.sh`"), sem tirar `docker-compose.yml`
+do lugar — essa separação (Dockerfile de implantação vs. dependências de
+dev) continua valendo, é só o script de orquestração que não mora dentro de
+nenhum dos dois.
+
 ## Actuator adicionado só por causa do healthcheck do container
 
 `spring-boot-starter-actuator` não fazia parte do escopo original — foi
 adicionado especificamente para o container da API ter um endpoint real de
 saúde (`/actuator/health`) que tanto o `HEALTHCHECK` do Docker Compose
-quanto o painel do `docker/run.sh` pudessem consultar. Continua sendo o
+quanto o painel do `run.sh` pudessem consultar. Continua sendo o
 motivo original pelo qual o Actuator está no projeto — por isso a lista de
 endpoints expostos (`management.endpoints.web.exposure.include`) só cresce
 quando existe um uso concreto (ver `health,circuitbreakers,

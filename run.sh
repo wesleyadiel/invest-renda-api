@@ -7,13 +7,13 @@
 # etapa.
 #
 # Uso:
-#   ./docker/run.sh              sobe as dependencias + builda/roda a API, acompanha health e segue os logs
-#   ./docker/run.sh deps         sobe só as dependencias (banco, fila, cache) - útil se for rodar a API
-#                                 direto na sua máquina via "mvn spring-boot:run"
-#   ./docker/run.sh status       só mostra o painel de saúde uma vez e sai
-#   ./docker/run.sh logs         só segue os logs da API (sem rebuildar/subir nada)
-#   ./docker/run.sh down         derruba tudo (dependências + API), mantém os dados do Postgres
-#   ./docker/run.sh down -v      derruba tudo e apaga os dados do Postgres também
+#   ./run.sh              sobe as dependencias + builda/roda a API, acompanha health e segue os logs
+#   ./run.sh deps         sobe só as dependencias (banco, fila, cache) - útil se for rodar a API
+#                          direto na sua máquina via "mvn spring-boot:run"
+#   ./run.sh status       só mostra o painel de saúde uma vez e sai
+#   ./run.sh logs         só segue os logs da API (sem rebuildar/subir nada)
+#   ./run.sh down         derruba tudo (dependências + API), mantém os dados do Postgres
+#   ./run.sh down -v      derruba tudo e apaga os dados do Postgres também
 
 set -euo pipefail
 
@@ -21,8 +21,7 @@ set -euo pipefail
 # Setup
 # ---------------------------------------------------------------------------
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$PROJECT_ROOT"
 
 DEPS_COMPOSE="docker/docker-compose.yml"
@@ -48,7 +47,7 @@ FRAMES=(⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏)
 
 banner() {
     printf '\n%s%s┌─────────────────────────────────────────────────┐%s\n' "$BOLD" "$CYAN" "$RESET"
-    printf '%s%s│  %-47s│%s\n' "$BOLD" "$CYAN" "invest-renda-api - docker/run.sh" "$RESET"
+    printf '%s%s│  %-47s│%s\n' "$BOLD" "$CYAN" "invest-renda-api - run.sh" "$RESET"
     printf '%s%s└─────────────────────────────────────────────────┘%s\n\n' "$BOLD" "$CYAN" "$RESET"
 }
 

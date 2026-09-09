@@ -184,7 +184,7 @@ Pré-requisitos: **Docker**. Para rodar a API fora de container, também **Java 
 ### Opção rápida — tudo via Docker
 
 ```bash
-./docker/run.sh
+./run.sh
 ```
 
 Sobe o Postgres, o Redis, o RabbitMQ e a própria API (build automático a partir do
@@ -192,15 +192,15 @@ Sobe o Postgres, o Redis, o RabbitMQ e a própria API (build automático a parti
 final, a API está em `http://localhost:8080`.
 
 ```bash
-./docker/run.sh status   # estado atual de cada serviço
-./docker/run.sh logs     # acompanhar os logs da API
-./docker/run.sh down     # derrubar tudo
+./run.sh status   # estado atual de cada serviço
+./run.sh logs     # acompanhar os logs da API
+./run.sh down     # derrubar tudo
 ```
 
 ### Opção para desenvolvimento — API fora do container
 
 ```bash
-./docker/run.sh deps     # sobe só Postgres, Redis e RabbitMQ
+./run.sh deps     # sobe só Postgres, Redis e RabbitMQ
 ./mvnw spring-boot:run   # roda a API direto na máquina, com hot reload de IDE
 ```
 
@@ -275,7 +275,8 @@ repositório contra Postgres real). Detalhes de cobertura em [`.specs/testing.md
 ```
 invest-renda-api/
 ├── Dockerfile              # imagem da API para build/implantação
-├── docker/                 # dependências (Postgres, Redis, RabbitMQ) + script de execução
+├── run.sh                  # sobe dependências + builda/roda a API (ver "Como rodar")
+├── docker/                 # dependências (docker-compose.yml: Postgres, Redis, RabbitMQ)
 ├── pom.xml
 ├── mvnw, mvnw.cmd, .mvn/    # Maven Wrapper — "./mvnw" funciona sem Maven pré-instalado
 ├── .specs/                 # documentação detalhada (arquitetura, decisões, etc.)
@@ -303,7 +304,7 @@ projeto:
 | [`caching.md`](.specs/caching.md) | Estratégia de cache Redis e invalidação |
 | [`messaging.md`](.specs/messaging.md) | Fila RabbitMQ, DLQ, retry, idempotência |
 | [`database.md`](.specs/database.md) | Schema, migrations Flyway |
-| [`docker.md`](.specs/docker.md) | Dockerfile, healthcheck, `docker/run.sh` |
+| [`docker.md`](.specs/docker.md) | Dockerfile, healthcheck, `run.sh` |
 | [`testing.md`](.specs/testing.md) | Cobertura de testes unitários e de integração |
 | [`web-frontend.md`](.specs/web-frontend.md) | O front-end Angular de validação |
 | [`decisions.md`](.specs/decisions.md) | Registro de decisões de arquitetura (o porquê de cada escolha) |
