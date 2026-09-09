@@ -5,6 +5,11 @@ import com.bancointer.investrenda.dto.RespostaApi;
 import com.bancointer.investrenda.dto.RespostaStatusCache;
 import com.bancointer.investrenda.dto.RespostaStatusFila;
 import com.bancointer.investrenda.dto.StatusFila;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.core.AmqpAdmin;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
@@ -27,6 +32,7 @@ import java.util.concurrent.TimeUnit;
  * RabbitMQ e do Redis (nao ha nada em cache/estado proprio aqui), para
  * refletir exatamente o que esta acontecendo nesses dois sistemas.
  */
+@Tag(name = "Observabilidade")
 @RestController
 @RequestMapping("/operacoes")
 @RequiredArgsConstructor
@@ -44,6 +50,11 @@ public class OperacoesController {
     @Value("${investrenda.rabbitmq.fila-morta}")
     private String nomeFilaMorta;
 
+    @Operation(summary = "Status da fila de aplicacoes",
+            description = "Consulta ao vivo no RabbitMQ - quantidade de mensagens e consumidores na fila "
+                    + "principal e na dead-letter queue.")
+    @ApiResponse(responseCode = "200", description = "Status consultado com sucesso.",
+            content = @Content(schema = @Schema(implementation = RespostaStatusFila.class)))
     @GetMapping("/fila")
     public RespostaApi<RespostaStatusFila> statusFila() {
         RespostaStatusFila status = new RespostaStatusFila(statusFila(nomeFila), statusFila(nomeFilaMorta));
@@ -60,6 +71,11 @@ public class OperacoesController {
         return new StatusFila(nome, true, quantidadeMensagens, quantidadeConsumidores);
     }
 
+    @Operation(summary = "Status do cache de produtos",
+            description = "Consulta ao vivo no Redis - se a listagem esta cacheada e quais detalhes de "
+                    + "produto individuais estao em cache, com o TTL restante de cada um.")
+    @ApiResponse(responseCode = "200", description = "Status consultado com sucesso.",
+            content = @Content(schema = @Schema(implementation = RespostaStatusCache.class)))
     @GetMapping("/cache")
     public RespostaApi<RespostaStatusCache> statusCache() {
         boolean listaCacheada = Boolean.TRUE.equals(stringRedisTemplate.hasKey(CHAVE_LISTA_PRODUTOS));

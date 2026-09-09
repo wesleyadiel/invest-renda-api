@@ -93,6 +93,8 @@ logging:
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
+    display-request-duration: true      # mostra quanto tempo cada chamada "Try it out" levou
+    doc-expansion: none                 # comeca com os grupos recolhidos, nao com tudo aberto
 
 management:
   endpoints:
