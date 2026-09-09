@@ -1,0 +1,50 @@
+# Dependencias de infraestrutura da invest-renda-api: banco, fila e cache.
+# NAO inclui a propria API - o Dockerfile para empacotar/implantar a API
+# fica na raiz do projeto (../Dockerfile).
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: invest-renda-postgres
+    environment:
+      POSTGRES_DB: invest_renda
+      POSTGRES_USER: invest_renda
+      POSTGRES_PASSWORD: invest_renda
+    ports:
+      - "5433:5432"
+    volumes:
+      - invest_renda_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U invest_renda -d invest_renda"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: invest-renda-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: invest-renda-rabbitmq
+    ports:
+      - "5672:5672"   # AMQP
+      - "15672:15672" # Management UI (guest/guest)
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  invest_renda_pgdata:
+
+networks:
+  default:
+    name: invest-renda-network

@@ -1,0 +1,22 @@
+# Maven
+target/
+
+# IDEs
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+.classpath
+.project
+.settings/
+
+# Logs
+*.log
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Maven Wrapper baixa o Maven aqui - nao versionar o download em si
+.mvn/wrapper/maven-wrapper.jar
