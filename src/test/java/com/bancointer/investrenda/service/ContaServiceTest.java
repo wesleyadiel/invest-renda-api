@@ -4,7 +4,9 @@ import com.bancointer.investrenda.domain.Conta;
 import com.bancointer.investrenda.dto.RequisicaoConta;
 import com.bancointer.investrenda.dto.RespostaConta;
 import com.bancointer.investrenda.exception.NaoEncontradoException;
+import com.bancointer.investrenda.exception.NegocioException;
 import com.bancointer.investrenda.exception.RecursoDuplicadoException;
+import com.bancointer.investrenda.repository.AplicacaoRepository;
 import com.bancointer.investrenda.repository.ContaRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,6 +31,9 @@ class ContaServiceTest {
 
     @Mock
     private ContaRepository contaRepository;
+
+    @Mock
+    private AplicacaoRepository aplicacaoRepository;
 
     @InjectMocks
     private ContaService contaService;
@@ -116,5 +121,44 @@ class ContaServiceTest {
         assertThat(respostas).hasSize(2)
                 .extracting(RespostaConta::cpf)
                 .containsExactly("11144477735", "52998224725");
+    }
+
+    @Test
+    void deveExcluirContaSemAplicacoesAssociadas() {
+        UUID id = UUID.randomUUID();
+        Conta conta = Conta.builder().id(id).cpf("11144477735").nomeTitular("Cliente Teste")
+                .saldo(BigDecimal.ZERO).build();
+
+        when(contaRepository.buscarPorCpf("11144477735")).thenReturn(Optional.of(conta));
+        when(aplicacaoRepository.existePorContaId(id)).thenReturn(false);
+
+        contaService.excluir("11144477735");
+
+        verify(contaRepository).delete(conta);
+    }
+
+    @Test
+    void deveLancarNaoEncontradoAoExcluirContaInexistente() {
+        when(contaRepository.buscarPorCpf("11144477735")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> contaService.excluir("11144477735"))
+                .isInstanceOf(NaoEncontradoException.class);
+
+        verify(contaRepository, never()).delete(any(Conta.class));
+    }
+
+    @Test
+    void deveLancarNegocioAoExcluirContaComAplicacoesAssociadas() {
+        UUID id = UUID.randomUUID();
+        Conta conta = Conta.builder().id(id).cpf("11144477735").nomeTitular("Cliente Teste")
+                .saldo(BigDecimal.ZERO).build();
+
+        when(contaRepository.buscarPorCpf("11144477735")).thenReturn(Optional.of(conta));
+        when(aplicacaoRepository.existePorContaId(id)).thenReturn(true);
+
+        assertThatThrownBy(() -> contaService.excluir("11144477735"))
+                .isInstanceOf(NegocioException.class);
+
+        verify(contaRepository, never()).delete(any(Conta.class));
     }
 }

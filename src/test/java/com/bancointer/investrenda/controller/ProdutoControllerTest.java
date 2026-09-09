@@ -5,6 +5,7 @@ import com.bancointer.investrenda.dto.RespostaDetalheProduto;
 import com.bancointer.investrenda.dto.RequisicaoProduto;
 import com.bancointer.investrenda.dto.RespostaResumoProduto;
 import com.bancointer.investrenda.exception.NaoEncontradoException;
+import com.bancointer.investrenda.exception.NegocioException;
 import com.bancointer.investrenda.service.ProdutoService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -21,8 +22,11 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -147,6 +151,40 @@ class ProdutoControllerTest {
 
         mockMvc.perform(get("/produtos/{id}", id))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void deveExcluirProduto() throws Exception {
+        UUID id = UUID.randomUUID();
+        doNothing().when(produtoService).excluir(id);
+
+        mockMvc.perform(delete("/produtos/{id}", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sucesso").value(true))
+                .andExpect(jsonPath("$.dados").doesNotExist())
+                .andExpect(jsonPath("$.mensagem").value("Produto excluido com sucesso"));
+    }
+
+    @Test
+    void deveRetornarNaoEncontradoAoExcluirProdutoInexistente() throws Exception {
+        UUID id = UUID.randomUUID();
+        doThrow(new NaoEncontradoException("Produto nao encontrado: " + id)).when(produtoService).excluir(id);
+
+        mockMvc.perform(delete("/produtos/{id}", id))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.sucesso").value(false));
+    }
+
+    @Test
+    void deveRetornarErroDeNegocioAoExcluirProdutoComAplicacoesAssociadas() throws Exception {
+        UUID id = UUID.randomUUID();
+        doThrow(new NegocioException("Nao e possivel excluir um produto com aplicacoes associadas"))
+                .when(produtoService).excluir(id);
+
+        mockMvc.perform(delete("/produtos/{id}", id))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.sucesso").value(false))
+                .andExpect(jsonPath("$.mensagem").value("Nao e possivel excluir um produto com aplicacoes associadas"));
     }
 
     @Test

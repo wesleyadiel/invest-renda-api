@@ -53,6 +53,13 @@ public class ManipuladorGlobalExcecao {
                 .body(RespostaApi.criarErro(ex.getMessage()));
     }
 
+    @ExceptionHandler(IntegracaoExternaException.class)
+    public ResponseEntity<RespostaApi<Object>> tratarIntegracaoExterna(IntegracaoExternaException ex) {
+        log.warn("Integracao externa indisponivel: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(RespostaApi.criarErro(ex.getMessage()));
+    }
+
     /**
      * Qualquer excecao nao tratada explicitamente acima (bug, falha de
      * infraestrutura, etc.) cai aqui - continua no formato padrao da API, e

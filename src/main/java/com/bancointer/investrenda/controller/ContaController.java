@@ -37,4 +37,10 @@ public class ContaController {
         List<RespostaConta> contas = contaService.listarTodas();
         return ResponseEntity.ok(RespostaApi.criarSucesso(contas, "Contas listadas com sucesso"));
     }
+
+    @DeleteMapping("/{cpf}")
+    public ResponseEntity<RespostaApi<Void>> excluir(@PathVariable String cpf) {
+        contaService.excluir(cpf);
+        return ResponseEntity.ok(RespostaApi.criarSucesso(null, "Conta excluida com sucesso"));
+    }
 }

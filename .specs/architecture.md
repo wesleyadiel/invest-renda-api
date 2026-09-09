@@ -16,6 +16,7 @@
 | Documentação de API | springdoc-openapi (Swagger UI em `/swagger-ui.html`) |
 | Observabilidade | Spring Boot Actuator (`/actuator/health`, usado pelo healthcheck do container) |
 | Rate limit      | Bucket4j (token bucket, em memória, um bucket por IP) |
+| Resiliência (chamadas externas) | Resilience4j (retry com backoff exponencial + circuit breaker) |
 | Build           | Maven (via Maven Wrapper, `./mvnw` — não exige Maven pré-instalado) |
 | Testes          | JUnit 5 + Mockito + AssertJ (unitários, sem infraestrutura) |
 | Containerização | Docker multi-stage build (`docker/Dockerfile`) + Docker Compose |
@@ -80,12 +81,15 @@ invest-renda-api/
     │   │   │   ├── ConfiguracaoRabbitMQ.java    # exchange, fila, DLQ, binding
     │   │   │   ├── ConfiguracaoCors.java
     │   │   │   └── ConfiguracaoLimiteRequisicoes.java, FiltroLimiteRequisicoes.java, PropriedadesLimiteRequisicoes.java  # rate limit
-    │   │   ├── controller/                      # camada HTTP (REST) - ProdutoController, ContaController, AplicacaoController, OperacoesController
+    │   │   ├── controller/                      # camada HTTP (REST) - ProdutoController, ContaController, AplicacaoController, OperacoesController, IntegracaoExternaController
     │   │   ├── service/                         # regras de negócio
     │   │   │   ├── ProdutoService.java
     │   │   │   ├── ContaService.java
     │   │   │   ├── AplicacaoService.java        # publica na fila (produtor)
-    │   │   │   └── ConsumidorRequisicaoAplicacao.java  # consome a fila
+    │   │   │   ├── ConsumidorRequisicaoAplicacao.java  # consome a fila
+    │   │   │   ├── ServicoIntegracaoExterna.java  # @Retry + @CircuitBreaker (Resilience4j), feature toggle
+    │   │   │   ├── ClienteCotacaoDolar.java       # fala com a AwesomeAPI (cotacao do dolar)
+    │   │   │   └── EstadoIntegracaoExterna.java   # toggles em memoria (habilitado / simular falha)
     │   │   ├── domain/                          # entidades JPA (Produto, Conta, Aplicacao)
     │   │   │   └── enums/                       # TipoProduto, StatusAplicacao
     │   │   ├── dto/                             # records de request/response, todos em portugues

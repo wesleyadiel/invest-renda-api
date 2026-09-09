@@ -12,6 +12,7 @@ Cadastro de produtos, contas por CPF e aplicações com débito de saldo process
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Redis](https://img.shields.io/badge/Redis-7-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io/)
 [![RabbitMQ](https://img.shields.io/badge/RabbitMQ-3.13-FF6600?style=for-the-badge&logo=rabbitmq&logoColor=white)](https://www.rabbitmq.com/)
+[![Resilience4j](https://img.shields.io/badge/Resilience4j-retry%20%2B%20circuit%20breaker-4051B5?style=for-the-badge)](https://resilience4j.readme.io/)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
 
 [![Build](https://img.shields.io/badge/build-Maven%20Wrapper-C71A36?style=flat-square&logo=apachemaven&logoColor=white)]()
@@ -46,9 +47,10 @@ Cadastro de produtos, contas por CPF e aplicações com débito de saldo process
 
 | Domínio | Funcionalidade |
 |---|---|
-| **Produtos** | Cadastrar, editar, listar (resumo) e consultar detalhe de produtos de renda fixa — nome, tipo, emissor, taxa, valor mínimo e prazo. Consultas passam por cache Redis. |
-| **Contas** | Abrir uma conta vinculada a um CPF com saldo inicial, e consultar saldo. |
+| **Produtos** | Cadastrar, editar, excluir, listar (resumo) e consultar detalhe de produtos de renda fixa — nome, tipo, emissor, taxa, valor mínimo e prazo. Consultas passam por cache Redis. Exclusão é bloqueada se houver aplicações associadas. |
+| **Contas** | Abrir uma conta vinculada a um CPF com saldo inicial, consultar saldo e excluir (bloqueada se houver aplicações associadas). |
 | **Aplicações** | Aplicar um valor em um produto. A conta é debitada e a aplicação é efetivada por um worker que escuta uma fila (RabbitMQ), usando os dados vigentes do produto (taxa e prazo) no momento do processamento. |
+| **Integrações externas** | Exemplo de chamada a uma API externa (cotação do dólar) protegida por feature toggle, retry com backoff exponencial e circuit breaker (Resilience4j) — inclui rota para simular falha e observar o comportamento. |
 
 ---
 
@@ -104,6 +106,10 @@ Cadastro de produtos, contas por CPF e aplicações com débito de saldo process
 <tr><td><b>Rate limit</b></td>
 <td><img src="https://img.shields.io/badge/Bucket4j-8.10.1-000000?logo=java&logoColor=white" alt="Bucket4j"/></td>
 <td>Token bucket em memória, um bucket por IP</td></tr>
+
+<tr><td><b>Resiliência (chamadas externas)</b></td>
+<td><img src="https://img.shields.io/badge/Resilience4j-2.2.0-4051B5" alt="Resilience4j"/></td>
+<td>Retry com backoff exponencial + circuit breaker na chamada de cotação (<code>/integracoes</code>)</td></tr>
 
 <tr><td><b>Boilerplate</b></td>
 <td><img src="https://img.shields.io/badge/Lombok-getters%2Fsetters%2Fbuilder-A50006?logo=lombok&logoColor=white" alt="Lombok"/></td>

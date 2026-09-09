@@ -4,6 +4,7 @@ import com.bancointer.investrenda.dto.RequisicaoConta;
 import com.bancointer.investrenda.dto.RespostaConta;
 import com.bancointer.investrenda.exception.RecursoDuplicadoException;
 import com.bancointer.investrenda.exception.NaoEncontradoException;
+import com.bancointer.investrenda.exception.NegocioException;
 import com.bancointer.investrenda.service.ContaService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -18,8 +19,11 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -113,5 +117,37 @@ class ContaControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.sucesso").value(true))
                 .andExpect(jsonPath("$.dados[0].cpf").value(CPF_VALIDO));
+    }
+
+    @Test
+    void deveExcluirConta() throws Exception {
+        doNothing().when(contaService).excluir(CPF_VALIDO);
+
+        mockMvc.perform(delete("/contas/{cpf}", CPF_VALIDO))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sucesso").value(true))
+                .andExpect(jsonPath("$.dados").doesNotExist())
+                .andExpect(jsonPath("$.mensagem").value("Conta excluida com sucesso"));
+    }
+
+    @Test
+    void deveRetornarNaoEncontradoAoExcluirContaInexistente() throws Exception {
+        doThrow(new NaoEncontradoException("Conta nao encontrada para o cpf: " + CPF_VALIDO))
+                .when(contaService).excluir(CPF_VALIDO);
+
+        mockMvc.perform(delete("/contas/{cpf}", CPF_VALIDO))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.sucesso").value(false));
+    }
+
+    @Test
+    void deveRetornarErroDeNegocioAoExcluirContaComAplicacoesAssociadas() throws Exception {
+        doThrow(new NegocioException("Nao e possivel excluir uma conta com aplicacoes associadas"))
+                .when(contaService).excluir(CPF_VALIDO);
+
+        mockMvc.perform(delete("/contas/{cpf}", CPF_VALIDO))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.sucesso").value(false))
+                .andExpect(jsonPath("$.mensagem").value("Nao e possivel excluir uma conta com aplicacoes associadas"));
     }
 }

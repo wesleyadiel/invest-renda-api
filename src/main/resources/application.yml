@@ -58,6 +58,33 @@ investrenda:
     capacidade: 120                    # rajada maxima permitida por cliente (IP)
     tokens-reposicao: 120               # tokens devolvidos por janela
     duracao-reposicao-segundos: 60      # duracao da janela (120 req/min por padrao)
+  integracaoexterna:
+    habilitado: true                   # feature toggle - liga/desliga a chamada a API externa
+    url-base: https://economia.awesomeapi.com.br
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      cotacaoDolar:
+        sliding-window-size: 10
+        sliding-window-type: COUNT_BASED
+        failure-rate-threshold: 50               # % de falhas na janela que abre o circuito
+        wait-duration-in-open-state: 10s         # tempo de circuito aberto antes de testar de novo
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+        record-exceptions:
+          - com.bancointer.investrenda.exception.FalhaConsultaCotacaoException
+        ignore-exceptions:
+          - com.bancointer.investrenda.exception.IntegracaoDesabilitadaException
+  retry:
+    instances:
+      cotacaoDolar:
+        max-attempts: 3                          # mesmo padrao do consumer RabbitMQ
+        wait-duration: 1s
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2        # 1s / 2s / 4s
+        retry-exceptions:
+          - com.bancointer.investrenda.exception.FalhaConsultaCotacaoException
 
 logging:
   level:
@@ -71,7 +98,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health
+        include: health,circuitbreakers,circuitbreakerevents,retries,retryevents
   endpoint:
     health:
       show-details: never

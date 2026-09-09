@@ -46,4 +46,10 @@ public class ProdutoController {
         RespostaDetalheProduto produto = produtoService.buscarDetalhe(id);
         return ResponseEntity.ok(RespostaApi.criarSucesso(produto, "Produto encontrado"));
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<RespostaApi<Void>> excluir(@PathVariable UUID id) {
+        produtoService.excluir(id);
+        return ResponseEntity.ok(RespostaApi.criarSucesso(null, "Produto excluido com sucesso"));
+    }
 }

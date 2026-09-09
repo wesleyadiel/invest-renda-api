@@ -6,6 +6,8 @@ import com.bancointer.investrenda.dto.RequisicaoProduto;
 import com.bancointer.investrenda.dto.RespostaDetalheProduto;
 import com.bancointer.investrenda.dto.RespostaResumoProduto;
 import com.bancointer.investrenda.exception.NaoEncontradoException;
+import com.bancointer.investrenda.exception.NegocioException;
+import com.bancointer.investrenda.repository.AplicacaoRepository;
 import com.bancointer.investrenda.repository.ProdutoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
@@ -22,6 +24,7 @@ import java.util.UUID;
 public class ProdutoService {
 
     private final ProdutoRepository produtoRepository;
+    private final AplicacaoRepository aplicacaoRepository;
 
     @Transactional
     @CacheEvict(cacheNames = ConfiguracaoCacheRedis.CACHE_PRODUTOS, allEntries = true)
@@ -60,6 +63,19 @@ public class ProdutoService {
         }
 
         return RespostaDetalheProduto.from(produtoRepository.saveAndFlush(produto));
+    }
+
+    @Transactional
+    @Caching(evict = {
+            @CacheEvict(cacheNames = ConfiguracaoCacheRedis.CACHE_PRODUTOS, allEntries = true),
+            @CacheEvict(cacheNames = ConfiguracaoCacheRedis.CACHE_PRODUTO, key = "#id")
+    })
+    public void excluir(UUID id) {
+        Produto produto = buscarEntidadePorId(id);
+        if (aplicacaoRepository.existePorProdutoId(id)) {
+            throw new NegocioException("Nao e possivel excluir um produto com aplicacoes associadas");
+        }
+        produtoRepository.delete(produto);
     }
 
     @Cacheable(cacheNames = ConfiguracaoCacheRedis.CACHE_PRODUTOS)

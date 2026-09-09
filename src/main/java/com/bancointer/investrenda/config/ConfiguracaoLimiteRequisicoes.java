@@ -20,7 +20,7 @@ public class ConfiguracaoLimiteRequisicoes {
             PropriedadesLimiteRequisicoes propriedades, ObjectMapper objectMapper) {
         FilterRegistrationBean<FiltroLimiteRequisicoes> registro =
                 new FilterRegistrationBean<>(new FiltroLimiteRequisicoes(propriedades, objectMapper));
-        registro.addUrlPatterns("/produtos/*", "/contas/*", "/aplicacoes/*", "/operacoes/*");
+        registro.addUrlPatterns("/produtos/*", "/contas/*", "/aplicacoes/*", "/operacoes/*", "/integracoes/*");
         registro.setOrder(1);
         return registro;
     }

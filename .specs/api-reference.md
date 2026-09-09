@@ -145,6 +145,14 @@ Passa por cache Redis (chave `produtos`, TTL 10 min).
 `404` se não existir. Passa por cache Redis (chave `produto::{id}`,
 TTL 10 min).
 
+### `DELETE /produtos/{id}` — excluir produto
+
+`200 OK`, `dados` = `null`. Invalida os mesmos caches do `PUT`. `404` se o
+produto não existir. `422` se houver **aplicações associadas** a esse
+produto — exclusão não é permitida nesse caso (o histórico de aplicações
+não pode ficar com uma referência quebrada); é preciso que o produto
+continue sem nenhuma aplicação vinculada.
+
 ---
 
 ## Contas
@@ -172,6 +180,12 @@ TTL 10 min).
 `200 OK`, `dados` = array no mesmo formato do `GET /contas/{cpf}`. Sem
 paginação (existe para alimentar telas de validação/administração, não é um
 endpoint de alto volume).
+
+### `DELETE /contas/{cpf}` — excluir conta
+
+`200 OK`, `dados` = `null`. `404` se a conta não existir. `422` se houver
+**aplicações associadas** a essa conta — mesma regra do produto, pelo mesmo
+motivo (preservar o histórico de aplicações íntegro).
 
 ---
 
@@ -274,3 +288,67 @@ armazenado ou simulado). Detalhes de motivação em
   "erros": []
 }
 ```
+
+## Integrações externas (`/integracoes`)
+
+Exemplo de chamada a uma API externa (AwesomeAPI, cotação do dólar) protegida
+por feature toggle + retry com backoff exponencial + circuit breaker
+(Resilience4j) — ver [`decisions.md`](./decisions.md) para o raciocínio
+completo e [`architecture.md`](./architecture.md) para onde isso se encaixa.
+
+### `GET /integracoes/cotacao-dolar` — consulta a cotação atual do dólar
+
+```json
+{
+  "sucesso": true,
+  "dados": {
+    "par": "USD/BRL",
+    "cotacaoCompra": 5.1066,
+    "cotacaoVenda": 5.1073,
+    "consultadoEm": "2026-09-09T18:33:42.438187553Z"
+  },
+  "mensagem": "Cotacao consultada com sucesso",
+  "erros": []
+}
+```
+
+`503 Service Unavailable` no mesmo envelope (`sucesso: false`) quando:
+- a integração está desabilitada (feature toggle desligado);
+- a simulação de falha está ativa e as 3 tentativas de retry se esgotaram;
+- o circuit breaker está aberto (falha rápida, sem nem tentar a chamada).
+
+### `GET /integracoes/status` — estado atual da integração
+
+```json
+{
+  "sucesso": true,
+  "dados": { "habilitado": true, "simulandoFalha": false, "estadoCircuito": "CLOSED" },
+  "mensagem": "Status da integracao consultado com sucesso",
+  "erros": []
+}
+```
+
+`estadoCircuito` é `CLOSED` (normal), `OPEN` (falha rápida, sem chamar a API
+externa) ou `HALF_OPEN` (testando se pode voltar a fechar).
+
+### `PUT /integracoes/habilitar` — liga/desliga a integração (feature toggle)
+
+```json
+{ "ativo": false }
+```
+
+Devolve o mesmo formato do `/status` já atualizado. Estado em memória — reseta
+para o valor do `application.yml` (`investrenda.integracaoexterna.habilitado`)
+a cada restart da aplicação.
+
+### `PUT /integracoes/simular-falha` — força falha na próxima consulta, para testar retry/circuit breaker
+
+```json
+{ "ativo": true }
+```
+
+Com `ativo: true`, toda chamada a `/integracoes/cotacao-dolar` falha
+*antes* de tentar a API externa de verdade — determinístico, não depende de
+rede. Útil para observar ao vivo o retry (3 tentativas, 1s/2s/4s) e, com
+chamadas repetidas, o circuit breaker abrindo (`GET /actuator/circuitbreakers`,
+`GET /actuator/retryevents`).

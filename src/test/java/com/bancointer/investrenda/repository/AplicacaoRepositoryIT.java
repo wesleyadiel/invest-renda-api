@@ -93,4 +93,25 @@ class AplicacaoRepositoryIT {
         assertThat(travada).isPresent();
         assertThat(travada.get().getCpf()).isEqualTo("52998224725");
     }
+
+    @Test
+    void deveIndicarExistenciaDeAplicacaoPorContaEPorProduto() {
+        Conta conta = contaRepository.saveAndFlush(Conta.builder()
+                .cpf("11122233344").nomeTitular("Cliente Exclusao").saldo(new BigDecimal("1000.00")).build());
+
+        Produto produto = produtoRepository.saveAndFlush(Produto.builder()
+                .nome("CDB Exclusao").tipo(TipoProduto.CDB).emissor("Banco X").classificacaoEmissor("AA")
+                .taxaAnual(new BigDecimal("12.00")).investimentoMinimo(new BigDecimal("100.00"))
+                .prazoMeses(12).ativo(true).build());
+
+        assertThat(aplicacaoRepository.existePorContaId(conta.getId())).isFalse();
+        assertThat(aplicacaoRepository.existePorProdutoId(produto.getId())).isFalse();
+
+        aplicacaoRepository.saveAndFlush(Aplicacao.builder()
+                .conta(conta).produto(produto).valor(new BigDecimal("100.00"))
+                .status(StatusAplicacao.CONCLUIDA).build());
+
+        assertThat(aplicacaoRepository.existePorContaId(conta.getId())).isTrue();
+        assertThat(aplicacaoRepository.existePorProdutoId(produto.getId())).isTrue();
+    }
 }

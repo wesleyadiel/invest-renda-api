@@ -4,7 +4,9 @@ import com.bancointer.investrenda.domain.Conta;
 import com.bancointer.investrenda.dto.RequisicaoConta;
 import com.bancointer.investrenda.dto.RespostaConta;
 import com.bancointer.investrenda.exception.NaoEncontradoException;
+import com.bancointer.investrenda.exception.NegocioException;
 import com.bancointer.investrenda.exception.RecursoDuplicadoException;
+import com.bancointer.investrenda.repository.AplicacaoRepository;
 import com.bancointer.investrenda.repository.ContaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,6 +20,7 @@ import java.util.List;
 public class ContaService {
 
     private final ContaRepository contaRepository;
+    private final AplicacaoRepository aplicacaoRepository;
 
     @Transactional
     public RespostaConta criar(RequisicaoConta requisicao) {
@@ -39,6 +42,18 @@ public class ContaService {
         Conta conta = contaRepository.buscarPorCpf(cpf)
                 .orElseThrow(() -> new NaoEncontradoException("Conta nao encontrada para o cpf: " + cpf));
         return RespostaConta.from(conta);
+    }
+
+    @Transactional
+    public void excluir(String cpf) {
+        Conta conta = contaRepository.buscarPorCpf(cpf)
+                .orElseThrow(() -> new NaoEncontradoException("Conta nao encontrada para o cpf: " + cpf));
+
+        if (aplicacaoRepository.existePorContaId(conta.getId())) {
+            throw new NegocioException("Nao e possivel excluir uma conta com aplicacoes associadas");
+        }
+
+        contaRepository.delete(conta);
     }
 
     @Transactional(readOnly = true)

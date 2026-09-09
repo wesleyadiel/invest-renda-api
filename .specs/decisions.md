@@ -333,11 +333,57 @@ máquina (Opção B) quanto para o container (Opção A). Detalhes em
 `spring-boot-starter-actuator` não fazia parte do escopo original — foi
 adicionado especificamente para o container da API ter um endpoint real de
 saúde (`/actuator/health`) que tanto o `HEALTHCHECK` do Docker Compose
-quanto o painel do `docker/run.sh` pudessem consultar. Só o endpoint
-`health` é exposto via web (`management.endpoints.web.exposure.include:
-health`) — o resto do Actuator (metrics, env, beans, etc.) fica desligado
-por não ter uso aqui e por não faltar expor informação interna sem
-necessidade.
+quanto o painel do `docker/run.sh` pudessem consultar. Continua sendo o
+motivo original pelo qual o Actuator está no projeto — por isso a lista de
+endpoints expostos (`management.endpoints.web.exposure.include`) só cresce
+quando existe um uso concreto (ver `health,circuitbreakers,
+circuitbreakerevents,retries,retryevents`, adicionados junto com a
+integração externa resiliente, abaixo) — nunca "porque pode ser útil algum
+dia". `metrics`, `env`, `beans`, etc. continuam desligados por não ter uso
+aqui e por não faltar expor informação interna sem necessidade.
+
+## Integração externa de exemplo com feature toggle + Resilience4j (retry + circuit breaker)
+
+Adicionado para ter, no projeto, um exemplo real de chamada a uma API
+externa protegida por resiliência — até então a API só falava com
+Postgres/Redis/RabbitMQ locais, nunca com nada de fora. Escolhas:
+
+- **AwesomeAPI** (`economia.awesomeapi.com.br`, cotação do dólar) como a
+  chamada externa — pública, sem autenticação, tema monetário (fintech),
+  sem custo de manter chave/token só para um exemplo.
+- **Resilience4j** (`resilience4j-spring-boot3` + `spring-boot-starter-aop`)
+  em vez de só Spring Retry — precisava de circuit breaker além de
+  retry/backoff, e o Spring Retry (já usado implicitamente pelo listener do
+  RabbitMQ) não tem circuit breaker nativo.
+- **Ordem dos decorators**: `@Retry` por fora, `@CircuitBreaker` por dentro
+  (`ServicoIntegracaoExterna.consultarCotacaoDolar`) — o `fallbackMethod`
+  fica no `@Retry` (o decorator mais externo), não no `@CircuitBreaker`.
+  Colocar o fallback no decorator interno foi o primeiro erro cometido aqui:
+  o `@CircuitBreaker` resolvia e mascarava a exceção antes do `@Retry`
+  conseguir tentar de novo, e as 3 tentativas nunca aconteciam (validado ao
+  vivo: sem essa correção, a chamada falhava instantaneamente ao simular
+  erro, em vez de esperar o backoff de ~3s). Com o fallback no `@Retry`,
+  cada tentativa de retry passa pelo circuit breaker de verdade, e um
+  circuito aberto faz as tentativas restantes falharem rápido
+  (`CallNotPermittedException`) em vez de esperar o backoff inteiro.
+- **Dois toggles separados, em memória** (`EstadoIntegracaoExterna`, não
+  persistido, reseta a cada restart): um liga/desliga a integração
+  (feature flag de produto — `PUT /integracoes/habilitar`), outro força
+  falha na próxima chamada para testar retry/circuit breaker de forma
+  determinística sem depender da API externa estar de fato fora do ar
+  (`PUT /integracoes/simular-falha`). São tratados como duas famílias de
+  exceção diferentes (`IntegracaoDesabilitadaException` vs
+  `FalhaConsultaCotacaoException`) porque têm significados diferentes para
+  o circuit breaker: desabilitado é um estado deliberado (fica de fora das
+  estatísticas via `resilience4j.circuitbreaker.instances.cotacaoDolar.
+  ignore-exceptions`), falha simulada é uma falha de verdade para fins de
+  contagem (conta para abrir o circuito).
+- Validado ao vivo o ciclo completo: consulta real funcionando, retry com
+  backoff exponencial medido (1s, depois 2s, ~3.2s total), circuito abrindo
+  após múltiplas falhas (`GET /actuator/circuitbreakers`), chamadas
+  seguintes falhando rápido (~30ms, `notPermittedCalls` incrementando), e
+  recuperação automática para `HALF_OPEN` após `wait-duration-in-open-state`
+  (10s) e depois `CLOSED` após chamadas de teste bem-sucedidas.
 
 ## Flyway + `ddl-auto: validate`, nunca `update`
 
