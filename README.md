@@ -15,6 +15,7 @@ Cadastro de produtos, contas por CPF e aplicações com débito de saldo process
 [![Resilience4j](https://img.shields.io/badge/Resilience4j-retry%20%2B%20circuit%20breaker-4051B5?style=for-the-badge)](https://resilience4j.readme.io/)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
 
+[![CI](https://github.com/wesleyadiel/invest-renda-api/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/wesleyadiel/invest-renda-api/actions/workflows/ci.yml)
 [![Build](https://img.shields.io/badge/build-Maven%20Wrapper-C71A36?style=flat-square&logo=apachemaven&logoColor=white)]()
 [![Tests](https://img.shields.io/badge/tests-JUnit%205%20%2B%20Mockito-25A162?style=flat-square&logo=junit5&logoColor=white)]()
 [![API Docs](https://img.shields.io/badge/docs-OpenAPI%203%20%2F%20Swagger-85EA2D?style=flat-square&logo=swagger&logoColor=black)]()
