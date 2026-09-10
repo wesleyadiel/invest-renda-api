@@ -7,15 +7,20 @@ import com.bancointer.investrenda.dto.RespostaConta;
 import com.bancointer.investrenda.exception.NaoEncontradoException;
 import com.bancointer.investrenda.exception.NegocioException;
 import com.bancointer.investrenda.exception.RecursoDuplicadoException;
+import com.bancointer.investrenda.logging.MascaraDados;
 import com.bancointer.investrenda.repository.AplicacaoRepository;
 import com.bancointer.investrenda.repository.ContaRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
 
+import static net.logstash.logback.argument.StructuredArguments.kv;
+
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ContaService {
@@ -35,24 +40,27 @@ public class ContaService {
                 .saldo(requisicao.saldoInicial() != null ? requisicao.saldoInicial() : BigDecimal.ZERO)
                 .build();
 
-        return RespostaConta.from(contaRepository.saveAndFlush(conta));
+        conta = contaRepository.saveAndFlush(conta);
+        log.info("Conta criada",
+                kv("contaId", conta.getId()), kv("cpf", MascaraDados.mascararCpf(conta.getCpf())), kv("saldoInicial", conta.getSaldo()));
+        return RespostaConta.from(conta);
     }
 
-    /**
-     * Deposita (soma ao saldo atual, nunca substitui) - unico jeito de repor
-     * saldo em uma conta ja existente, por exemplo apos ela ter zerado num
-     * teste. Usa o mesmo lock pessimista que ConsumidorRequisicaoAplicacao
-     * usa para debitar, para não perder incremento se um debito
-     * concorrente estiver em andamento na mesma conta.
-     */
+    // Soma ao saldo atual, nunca substitui - unico jeito de repor saldo em
+    // uma conta ja existente (ex: apos zerar num teste). Usa o mesmo lock
+    // pessimista que ConsumidorRequisicaoAplicacao usa para debitar, para
+    // nao perder incremento se um debito concorrente estiver em andamento.
     @Transactional
     public RespostaConta depositar(String cpf, RequisicaoDeposito requisicao) {
         Conta conta = contaRepository.buscarPorCpfParaAtualizacao(cpf)
                 .orElseThrow(() -> new NaoEncontradoException("Conta nao encontrada para o cpf: " + cpf));
 
         conta.depositar(requisicao.valor());
+        conta = contaRepository.saveAndFlush(conta);
 
-        return RespostaConta.from(contaRepository.saveAndFlush(conta));
+        log.info("Deposito realizado",
+                kv("contaId", conta.getId()), kv("cpf", MascaraDados.mascararCpf(cpf)), kv("valor", requisicao.valor()));
+        return RespostaConta.from(conta);
     }
 
     @Transactional(readOnly = true)
@@ -72,6 +80,7 @@ public class ContaService {
         }
 
         contaRepository.delete(conta);
+        log.info("Conta excluida", kv("contaId", conta.getId()), kv("cpf", MascaraDados.mascararCpf(cpf)));
     }
 
     @Transactional(readOnly = true)

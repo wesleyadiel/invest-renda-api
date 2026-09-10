@@ -11,27 +11,15 @@ import com.bancointer.investrenda.repository.ContaRepository;
 import com.bancointer.investrenda.repository.ProdutoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 
-/**
- * Consome as solicitacoes de aplicacao da fila e efetiva o investimento:
- * trava a conta (lock pessimista) para evitar corrida entre aplicacoes
- * concorrentes, confere saldo e debita de acordo com os dados atuais do
- * produto (taxa e prazo), mantendo a conta e a aplicacao consistentes na
- * mesma transacao.
- *
- * <p>Se {@link EstadoProcessamentoFila#isSimularFalha()} estiver ativo,
- * lanca falha antes de tocar o banco, de forma deterministica, para
- * exercitar o retry do listener (spring.rabbitmq.listener.simple.retry no
- * application.yml, mesmo padrao 3x/1s-2s-4s usado no circuit breaker da
- * cotacao do dolar) e - apos as tentativas se esgotarem - o roteamento
- * automatico para a dead-letter queue (fila configurada com
- * x-dead-letter-exchange/routing-key em ConfiguracaoRabbitMQ).</p>
- */
+import static net.logstash.logback.argument.StructuredArguments.kv;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -45,7 +33,17 @@ public class ConsumidorRequisicaoAplicacao {
     @RabbitListener(queues = "${investrenda.rabbitmq.fila}")
     @Transactional
     public void processar(MensagemAplicacaoSolicitada mensagem) {
+        MDC.put("aplicacaoId", mensagem.aplicacaoId().toString());
+        try {
+            processarComMdc(mensagem);
+        } finally {
+            MDC.remove("aplicacaoId");
+        }
+    }
+
+    private void processarComMdc(MensagemAplicacaoSolicitada mensagem) {
         if (estadoProcessamentoFila.isSimularFalha()) {
+            log.warn("Falha simulada no processamento da fila");
             throw new FalhaProcessamentoAplicacaoException(
                     "Falha simulada via toggle de teste (PUT /operacoes/fila/simular-falha)");
         }
@@ -54,8 +52,7 @@ public class ConsumidorRequisicaoAplicacao {
                 .orElseThrow(() -> new IllegalStateException("Aplicacao nao encontrada: " + mensagem.aplicacaoId()));
 
         if (aplicacao.getStatus() != StatusAplicacao.PENDENTE) {
-            log.info("Aplicacao {} ja processada com status {}, ignorando mensagem duplicada",
-                    aplicacao.getId(), aplicacao.getStatus());
+            log.info("Mensagem duplicada ignorada", kv("status", aplicacao.getStatus()));
             return;
         }
 
@@ -64,18 +61,18 @@ public class ConsumidorRequisicaoAplicacao {
         Produto produto = produtoRepository.findById(mensagem.produtoId())
                 .orElseThrow(() -> new IllegalStateException("Produto nao encontrado: " + mensagem.produtoId()));
 
-        // Normalmente igual ao valor com que a aplicacao foi criada - mas
-        // pode divergir quando a mensagem foi reprocessada da DLQ com um
-        // novoValor (POST /operacoes/fila/dlq/reprocessar). O registro da
-        // aplicacao precisa refletir o valor de fato debitado, senao o
-        // saldo debitado e o valor exibido na aplicacao ficam inconsistentes.
+        // Normalmente igual ao valor de criacao da aplicacao, mas pode
+        // divergir quando a mensagem foi reprocessada da DLQ com novoValor
+        // (POST /operacoes/fila/dlq/reprocessar) - o registro precisa
+        // refletir o valor de fato debitado, senao fica inconsistente com
+        // o saldo movimentado.
         aplicacao.setValor(mensagem.valor());
 
         if (!conta.temSaldoSuficiente(mensagem.valor())) {
             aplicacao.setStatus(StatusAplicacao.FALHOU);
             aplicacao.setMotivoFalha("Saldo insuficiente na conta");
             aplicacaoRepository.save(aplicacao);
-            log.warn("Aplicacao {} falhou: saldo insuficiente na conta {}", aplicacao.getId(), conta.getId());
+            log.warn("Aplicacao falhou: saldo insuficiente", kv("contaId", conta.getId()), kv("valor", mensagem.valor()));
             return;
         }
 
@@ -87,6 +84,6 @@ public class ConsumidorRequisicaoAplicacao {
         aplicacao.setDataVencimento(LocalDate.now().plusMonths(produto.getPrazoMeses()));
         aplicacaoRepository.save(aplicacao);
 
-        log.info("Aplicacao {} concluida: conta {} debitada em {}", aplicacao.getId(), conta.getId(), mensagem.valor());
+        log.info("Aplicacao concluida", kv("contaId", conta.getId()), kv("valor", mensagem.valor()));
     }
 }

@@ -8,6 +8,7 @@ import com.bancointer.investrenda.dto.RespostaApi;
 import com.bancointer.investrenda.dto.RespostaStatusCache;
 import com.bancointer.investrenda.dto.RespostaStatusFila;
 import com.bancointer.investrenda.dto.StatusFila;
+import com.bancointer.investrenda.logging.AppenderLogAoVivo;
 import com.bancointer.investrenda.messaging.MensagemAplicacaoSolicitada;
 import com.bancointer.investrenda.service.EstadoProcessamentoFila;
 import com.bancointer.investrenda.service.ServicoFilaMorta;
@@ -24,12 +25,14 @@ import org.springframework.amqp.core.AmqpAdmin;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.Comparator;
 import java.util.List;
@@ -38,15 +41,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Endpoints so para observabilidade/validacao manual da API - nao fazem
- * parte do dominio de negocio. A quantidade de mensagens e consumidores vem
- * consultada ao vivo do RabbitMQ e do Redis, para refletir exatamente o que
- * esta acontecendo nesses dois sistemas; a unica excecao e o toggle de
- * simulacao de falha da fila ({@link EstadoProcessamentoFila}), que e
- * estado em memoria proprio da API (mesmo padrao do toggle de simulacao do
- * circuit breaker em IntegracaoExternaController).
- */
 @Tag(name = "Observabilidade")
 @RestController
 @RequestMapping("/operacoes")
@@ -124,6 +118,17 @@ public class OperacoesController {
     public RespostaApi<MensagemAplicacaoSolicitada> reprocessarDlq(@Valid @RequestBody RequisicaoReprocessarDlq requisicao) {
         MensagemAplicacaoSolicitada reenviada = servicoFilaMorta.reprocessar(requisicao.aplicacaoId(), requisicao.novoValor());
         return RespostaApi.criarSucesso(reenviada, "Mensagem reprocessada e reenviada para a fila principal");
+    }
+
+    @Operation(summary = "Stream de logs ao vivo (SSE)",
+            description = "Conecta via Server-Sent Events e recebe, em tempo real, cada linha de log da API "
+                    + "(mesmo JSON estruturado do console) assim que ela acontece - mais o buffer das ultimas "
+                    + "300 linhas, para quem conectar depois de algo ja ter acontecido. Consuma com o "
+                    + "EventSource nativo do browser; nao precisa de nenhum client especial.")
+    @ApiResponse(responseCode = "200", description = "Conexao aberta - eventos chegam como eles forem gerados, indefinidamente.")
+    @GetMapping(value = "/logs/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter streamLogs() {
+        return AppenderLogAoVivo.assinar();
     }
 
     private StatusFila statusFila(String nome) {

@@ -10,18 +10,9 @@ import org.springframework.context.annotation.Configuration;
 
 import java.util.List;
 
-/**
- * Metadados globais do Swagger/OpenAPI (titulo, descricao, contato, ordem
- * das tags) - sem isso o springdoc gera uma documentacao so com os
- * endpoints "nus", sem nenhum contexto de negocio.
- *
- * A ordem da lista de tags aqui e a ordem em que os grupos aparecem no
- * Swagger UI (segue o fluxo natural de uso da API: produto -> conta ->
- * aplicacao -> observabilidade -> integracao externa). As anotacoes
- * {@code @Tag(name = "...")} nos controllers so associam cada operacao ao
- * grupo certo por nome - a descricao de cada grupo mora so aqui, para nao
- * duplicar texto em dois lugares.
- */
+// A ordem da lista de tags abaixo e a ordem em que os grupos aparecem no
+// Swagger UI. @Tag(name = "...") nos controllers so associa a operacao ao
+// grupo por nome - a descricao de cada grupo mora so aqui, sem duplicar.
 @Configuration
 public class ConfiguracaoOpenApi {
 

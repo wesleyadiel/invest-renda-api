@@ -13,6 +13,7 @@ import com.bancointer.investrenda.repository.AplicacaoRepository;
 import com.bancointer.investrenda.repository.ContaRepository;
 import com.bancointer.investrenda.repository.ProdutoRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -21,13 +22,13 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Fluxo assincrono: a requisicao apenas valida os dados de entrada, registra
- * a aplicacao como PENDENTE e publica na fila. O debito de saldo e a
- * conclusao da aplicacao acontecem no {@link ConsumidorRequisicaoAplicacao},
- * que roda em transacao propria para evitar corrida entre aplicacoes
- * concorrentes na mesma conta.
- */
+import static net.logstash.logback.argument.StructuredArguments.kv;
+
+// O debito de saldo e a conclusao da aplicacao NAO acontecem aqui - so
+// registra como PENDENTE e publica na fila; quem debita e conclui e o
+// ConsumidorRequisicaoAplicacao, em transacao propria, para nao serializar
+// aplicacoes concorrentes de contas diferentes atras desta chamada HTTP.
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AplicacaoService {
@@ -72,6 +73,10 @@ public class AplicacaoService {
                 aplicacao.getId(), conta.getId(), produto.getId(), requisicao.valor());
 
         rabbitTemplate.convertAndSend(nomeExchange, chaveRoteamento, mensagem);
+
+        log.info("Aplicacao solicitada e publicada na fila",
+                kv("aplicacaoId", aplicacao.getId()), kv("contaId", conta.getId()),
+                kv("produtoId", produto.getId()), kv("valor", requisicao.valor()));
 
         return RespostaAplicacao.from(aplicacao);
     }

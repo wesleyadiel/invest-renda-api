@@ -12,27 +12,15 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import static net.logstash.logback.argument.StructuredArguments.kv;
+
 /**
- * Orquestra a consulta de cotacao do dolar (via {@link ClienteCotacaoDolar})
- * com resiliencia:
- *
- * <ul>
- *   <li>Feature toggle ({@link EstadoIntegracaoExterna#isHabilitado()}) - se
- *       desligado, falha rapido sem contar como falha no circuit breaker
- *       (application.yml, resilience4j.circuitbreaker.instances.cotacaoDolar.
- *       ignore-exceptions).</li>
- *   <li>Toggle de simulacao de falha - forca uma
- *       {@link FalhaConsultaCotacaoException} antes de chamar a API real,
- *       para exercitar o retry (3x, backoff 1s/2s/4s, mesmo padrao usado no
- *       consumer RabbitMQ) e o circuit breaker de forma deterministica.</li>
- *   <li>Retry + circuit breaker (Resilience4j) - o Retry e o decorator mais
- *       externo (padrao da lib): cada tentativa de retry passa pelo circuit
- *       breaker, entao um circuito aberto faz as tentativas restantes
- *       falharem rapido (CallNotPermittedException) em vez de esperar o
- *       backoff inteiro. Por isso o fallback fica no {@code @Retry}, nao no
- *       {@code @CircuitBreaker} - se ficasse no interno, ele resolveria e
- *       mascararia a excecao antes do Retry conseguir tentar de novo.</li>
- * </ul>
+ * O Retry e o decorator mais externo (padrao Resilience4j): cada tentativa
+ * passa pelo circuit breaker, entao um circuito aberto faz as tentativas
+ * restantes falharem rapido (CallNotPermittedException) em vez de esperar
+ * o backoff inteiro. Por isso o fallback fica no {@code @Retry}, nao no
+ * {@code @CircuitBreaker} - se ficasse no interno, ele resolveria e
+ * mascararia a excecao antes do Retry conseguir tentar de novo.
  */
 @Slf4j
 @Service
@@ -57,26 +45,21 @@ public class ServicoIntegracaoExterna {
         return clienteCotacaoDolar.buscarCotacaoDolar();
     }
 
-    /**
-     * O Resilience4j resolve o fallback pelo tipo da excecao, do mais
-     * especifico para o mais generico - essa sobrecarga e escolhida so
-     * quando a excecao e exatamente "desabilitada" (ignorada pelo circuit
-     * breaker via resilience4j.circuitbreaker.instances.cotacaoDolar.ignore-
-     * exceptions no application.yml). Repassa sem mascarar a causa, ja que
-     * aqui nao houve nem tentativa de chamada externa.
-     */
+    // Resilience4j resolve o fallback pelo tipo da excecao, do mais
+    // especifico ao mais generico - esta sobrecarga so e escolhida quando a
+    // excecao e exatamente "desabilitada" (ignore-exceptions no
+    // application.yml). Repassa sem mascarar a causa, ja que aqui nao houve
+    // nem tentativa de chamada externa.
     private RespostaCotacaoDolar fallbackFalhaOuCircuitoAberto(IntegracaoDesabilitadaException ex) {
         throw ex;
     }
 
-    /**
-     * Resolvido para qualquer outra excecao: retries esgotados
-     * (FalhaConsultaCotacaoException) ou circuito aberto
-     * (CallNotPermittedException). Em ambos os casos, do ponto de vista do
-     * cliente da API o resultado e o mesmo: servico indisponivel agora.
-     */
+    // Resolvido para qualquer outra excecao: retries esgotados ou circuito
+    // aberto (CallNotPermittedException) - do ponto de vista do cliente da
+    // API o resultado e o mesmo, servico indisponivel agora.
     private RespostaCotacaoDolar fallbackFalhaOuCircuitoAberto(Throwable ex) {
-        log.warn("Cotacao do dolar indisponivel apos retries/circuit breaker: {}", ex.getMessage());
+        log.warn("Cotacao do dolar indisponivel apos retries/circuit breaker",
+                kv("motivo", ex.getMessage()), kv("tipoExcecao", ex.getClass().getSimpleName()));
         throw new IntegracaoIndisponivelException("Servico de cotacao indisponivel no momento, tente novamente em breve");
     }
 

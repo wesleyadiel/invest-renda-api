@@ -12,12 +12,6 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Map;
 
-/**
- * Fala com a AwesomeAPI (economia.awesomeapi.com.br) - API publica
- * brasileira de cotacoes, sem autenticacao. Usada aqui so como exemplo de
- * chamada externa protegida por retry + circuit breaker (Resilience4j), ver
- * {@link ServicoIntegracaoExterna}.
- */
 @Component
 @RequiredArgsConstructor
 public class ClienteCotacaoDolar {

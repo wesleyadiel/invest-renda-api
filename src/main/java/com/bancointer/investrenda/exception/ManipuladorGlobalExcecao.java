@@ -9,13 +9,11 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.io.IOException;
 import java.util.List;
 
-/**
- * Traduz toda excecao (tratada ou nao) para o mesmo envelope de resposta
- * ({@link RespostaApi}) usado nos sucessos - nenhum endpoint devolve o
- * formato de erro padrao do Spring.
- */
+import static net.logstash.logback.argument.StructuredArguments.kv;
+
 @Slf4j
 @RestControllerAdvice
 public class ManipuladorGlobalExcecao {
@@ -55,22 +53,30 @@ public class ManipuladorGlobalExcecao {
 
     @ExceptionHandler(IntegracaoExternaException.class)
     public ResponseEntity<RespostaApi<Object>> tratarIntegracaoExterna(IntegracaoExternaException ex) {
-        log.warn("Integracao externa indisponivel: {}", ex.getMessage());
+        log.warn("Integracao externa indisponivel", kv("motivo", ex.getMessage()));
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(RespostaApi.criarErro(ex.getMessage()));
     }
 
-    /**
-     * Qualquer excecao nao tratada explicitamente acima (bug, falha de
-     * infraestrutura, etc.) cai aqui - continua no formato padrao da API, e
-     * a mensagem real da excecao e exposta, nao escondida atras de um
-     * "erro interno" generico. Loga em nivel ERROR com a stack trace para
-     * investigacao (a mensagem devolvida ao cliente por si so raramente e
-     * suficiente para diagnosticar a causa).
-     */
+    // Cliente desconectou no meio de uma resposta em stream (aba fechada,
+    // rede caiu) - Tomcat/Spring reportam isso como IOException ("Broken
+    // pipe"/"Connection reset") mesmo em conexoes assincronas como o SSE de
+    // /operacoes/logs/stream. Nao e bug da aplicacao nem acionavel, e nao
+    // ha mais ninguem do outro lado do socket para receber resposta -
+    // retornar void evita que o proprio Spring tente escrever (e falhar
+    // escrevendo) uma resposta de erro nessa conexao ja morta.
+    @ExceptionHandler(IOException.class)
+    public void tratarConexaoInterrompida(IOException ex) {
+        log.debug("Conexao interrompida pelo cliente", kv("motivo", ex.getMessage()));
+    }
+
+    // Exposta ao cliente de proposito (nao escondida atras de um "erro
+    // interno" generico) - decisao deliberada para facilitar debug do
+    // consumidor da API; o log em ERROR com stack trace cobre a
+    // investigacao do lado do servidor.
     @ExceptionHandler(Exception.class)
     public ResponseEntity<RespostaApi<Object>> tratarNaoTratada(Exception ex) {
-        log.error("Excecao nao tratada", ex);
+        log.error("Excecao nao tratada", kv("tipoExcecao", ex.getClass().getSimpleName()), ex);
         String mensagem = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(RespostaApi.criarErro(mensagem));

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <springProperty name="appName" source="spring.application.name" defaultValue="invest-renda-api"/>
+
+    <!-- JSON no console - unico appender (sem duplicar em texto puro), pronto
+         para um Datadog Agent futuro consumir via stdout/docker sem nenhuma
+         mudanca de codigo; hoje so roda local. -->
+    <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <customFields>{"service":"${appName}","env":"local"}</customFields>
+            <fieldNames>
+                <timestamp>timestamp</timestamp>
+                <message>message</message>
+                <logger>logger</logger>
+                <thread>thread</thread>
+                <level>level</level>
+                <levelValue>[ignore]</levelValue>
+            </fieldNames>
+        </encoder>
+    </appender>
+
+    <!-- Buffer em memoria + stream SSE (GET /operacoes/logs/stream) para a
+         pagina de logs ao vivo do frontend. -->
+    <appender name="LOG_AO_VIVO" class="com.bancointer.investrenda.logging.AppenderLogAoVivo">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <customFields>{"service":"${appName}","env":"local"}</customFields>
+            <fieldNames>
+                <timestamp>timestamp</timestamp>
+                <message>message</message>
+                <logger>logger</logger>
+                <thread>thread</thread>
+                <level>level</level>
+                <levelValue>[ignore]</levelValue>
+            </fieldNames>
+        </encoder>
+    </appender>
+
+    <!-- Tomcat loga de novo, no nivel do container (fora do alcance de
+         @ExceptionHandler), toda desconexao abrupta de uma resposta em
+         stream (o SSE de /operacoes/logs/stream fecha assim toda vez que
+         uma aba sai da pagina) - duplica o que ManipuladorGlobalExcecao ja
+         trata deliberadamente em DEBUG. Sem valor de diagnostico extra. -->
+    <logger name="org.apache.catalina.core.ContainerBase" level="OFF"/>
+
+    <root level="INFO">
+        <appender-ref ref="JSON"/>
+        <appender-ref ref="LOG_AO_VIVO"/>
+    </root>
+</configuration>

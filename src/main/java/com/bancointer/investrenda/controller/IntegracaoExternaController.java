@@ -17,12 +17,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-/**
- * Exemplo de chamada a uma API externa (cotacao do dolar) protegida por
- * feature toggle + retry + circuit breaker, e as rotas usadas para simular
- * falha e observar o comportamento sem depender da API externa de verdade
- * estar fora do ar.
- */
 @Tag(name = "Integrações Externas")
 @RestController
 @RequestMapping("/integracoes")

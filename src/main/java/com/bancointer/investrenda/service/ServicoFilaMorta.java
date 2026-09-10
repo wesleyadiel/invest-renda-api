@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.GetResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -17,6 +18,8 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+
+import static net.logstash.logback.argument.StructuredArguments.kv;
 
 /**
  * Espia (peek) e reprocessa manualmente mensagens presas na dead-letter
@@ -31,6 +34,7 @@ import java.util.UUID;
  * faz o mesmo drain, mas so devolve as mensagens que nao sao o alvo; a
  * escolhida e retirada de vez (ack) e republicada na fila principal.</p>
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ServicoFilaMorta {
@@ -88,6 +92,7 @@ public class ServicoFilaMorta {
             }
 
             if (mensagemAlvo == null) {
+                log.warn("Reprocessamento solicitado para mensagem ausente na DLQ", kv("aplicacaoId", aplicacaoId));
                 throw new NaoEncontradoException("Mensagem nao encontrada na dead-letter queue: " + aplicacaoId);
             }
 
@@ -96,6 +101,8 @@ public class ServicoFilaMorta {
                     : mensagemAlvo;
 
             rabbitTemplate.convertAndSend(nomeExchange, chaveRoteamento, reenviada);
+            log.info("Mensagem reprocessada da DLQ",
+                    kv("aplicacaoId", aplicacaoId), kv("valorOriginal", mensagemAlvo.valor()), kv("valorReenviado", reenviada.valor()));
             return reenviada;
         });
     }
