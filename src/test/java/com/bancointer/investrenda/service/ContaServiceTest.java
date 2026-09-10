@@ -2,6 +2,7 @@ package com.bancointer.investrenda.service;
 
 import com.bancointer.investrenda.domain.Conta;
 import com.bancointer.investrenda.dto.RequisicaoConta;
+import com.bancointer.investrenda.dto.RequisicaoDeposito;
 import com.bancointer.investrenda.dto.RespostaConta;
 import com.bancointer.investrenda.exception.NaoEncontradoException;
 import com.bancointer.investrenda.exception.NegocioException;
@@ -121,6 +122,30 @@ class ContaServiceTest {
         assertThat(respostas).hasSize(2)
                 .extracting(RespostaConta::cpf)
                 .containsExactly("11144477735", "52998224725");
+    }
+
+    @Test
+    void deveDepositarSomandoAoSaldoAtual() {
+        Conta conta = Conta.builder().id(UUID.randomUUID()).cpf("11144477735")
+                .nomeTitular("Cliente Teste").saldo(BigDecimal.ZERO).build();
+
+        when(contaRepository.buscarPorCpfParaAtualizacao("11144477735")).thenReturn(Optional.of(conta));
+        when(contaRepository.saveAndFlush(conta)).thenReturn(conta);
+
+        RespostaConta resposta = contaService.depositar("11144477735", new RequisicaoDeposito(new BigDecimal("500.00")));
+
+        assertThat(resposta.saldo()).isEqualByComparingTo("500.00");
+        assertThat(conta.getSaldo()).isEqualByComparingTo("500.00");
+    }
+
+    @Test
+    void deveLancarNaoEncontradoAoDepositarEmContaInexistente() {
+        when(contaRepository.buscarPorCpfParaAtualizacao("11144477735")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> contaService.depositar("11144477735", new RequisicaoDeposito(new BigDecimal("500.00"))))
+                .isInstanceOf(NaoEncontradoException.class);
+
+        verify(contaRepository, never()).saveAndFlush(any(Conta.class));
     }
 
     @Test

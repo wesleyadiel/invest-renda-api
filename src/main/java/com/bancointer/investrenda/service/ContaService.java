@@ -2,6 +2,7 @@ package com.bancointer.investrenda.service;
 
 import com.bancointer.investrenda.domain.Conta;
 import com.bancointer.investrenda.dto.RequisicaoConta;
+import com.bancointer.investrenda.dto.RequisicaoDeposito;
 import com.bancointer.investrenda.dto.RespostaConta;
 import com.bancointer.investrenda.exception.NaoEncontradoException;
 import com.bancointer.investrenda.exception.NegocioException;
@@ -33,6 +34,23 @@ public class ContaService {
                 .nomeTitular(requisicao.nomeTitular())
                 .saldo(requisicao.saldoInicial() != null ? requisicao.saldoInicial() : BigDecimal.ZERO)
                 .build();
+
+        return RespostaConta.from(contaRepository.saveAndFlush(conta));
+    }
+
+    /**
+     * Deposita (soma ao saldo atual, nunca substitui) - unico jeito de repor
+     * saldo em uma conta ja existente, por exemplo apos ela ter zerado num
+     * teste. Usa o mesmo lock pessimista que ConsumidorRequisicaoAplicacao
+     * usa para debitar, para não perder incremento se um debito
+     * concorrente estiver em andamento na mesma conta.
+     */
+    @Transactional
+    public RespostaConta depositar(String cpf, RequisicaoDeposito requisicao) {
+        Conta conta = contaRepository.buscarPorCpfParaAtualizacao(cpf)
+                .orElseThrow(() -> new NaoEncontradoException("Conta nao encontrada para o cpf: " + cpf));
+
+        conta.depositar(requisicao.valor());
 
         return RespostaConta.from(contaRepository.saveAndFlush(conta));
     }

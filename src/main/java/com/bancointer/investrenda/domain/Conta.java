@@ -47,6 +47,10 @@ public class Conta {
         this.saldo = this.saldo.subtract(valor);
     }
 
+    public void depositar(BigDecimal valor) {
+        this.saldo = this.saldo.add(valor);
+    }
+
     public boolean temSaldoSuficiente(BigDecimal valor) {
         return this.saldo.compareTo(valor) >= 0;
     }

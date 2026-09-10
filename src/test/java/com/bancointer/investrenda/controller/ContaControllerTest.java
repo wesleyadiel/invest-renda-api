@@ -1,6 +1,7 @@
 package com.bancointer.investrenda.controller;
 
 import com.bancointer.investrenda.dto.RequisicaoConta;
+import com.bancointer.investrenda.dto.RequisicaoDeposito;
 import com.bancointer.investrenda.dto.RespostaConta;
 import com.bancointer.investrenda.exception.RecursoDuplicadoException;
 import com.bancointer.investrenda.exception.NaoEncontradoException;
@@ -19,6 +20,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -106,6 +108,44 @@ class ContaControllerTest {
 
         mockMvc.perform(get("/contas/{cpf}", CPF_VALIDO))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void deveDepositarNaConta() throws Exception {
+        RequisicaoDeposito requisicao = new RequisicaoDeposito(new BigDecimal("500.00"));
+        RespostaConta resposta = new RespostaConta(UUID.randomUUID(), CPF_VALIDO, "Cliente Teste", new BigDecimal("500.00"));
+        when(contaService.depositar(eq(CPF_VALIDO), any(RequisicaoDeposito.class))).thenReturn(resposta);
+
+        mockMvc.perform(post("/contas/{cpf}/depositar", CPF_VALIDO)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requisicao)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sucesso").value(true))
+                .andExpect(jsonPath("$.dados.saldo").value(500.00))
+                .andExpect(jsonPath("$.mensagem").value("Deposito realizado com sucesso"));
+    }
+
+    @Test
+    void deveRejeitarDepositoComValorZeroOuNegativoSemChamarService() throws Exception {
+        mockMvc.perform(post("/contas/{cpf}/depositar", CPF_VALIDO)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"valor\": 0}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.sucesso").value(false));
+
+        verifyNoInteractions(contaService);
+    }
+
+    @Test
+    void deveRetornarNaoEncontradoAoDepositarEmContaInexistente() throws Exception {
+        when(contaService.depositar(eq(CPF_VALIDO), any(RequisicaoDeposito.class)))
+                .thenThrow(new NaoEncontradoException("Conta nao encontrada para o cpf: " + CPF_VALIDO));
+
+        mockMvc.perform(post("/contas/{cpf}/depositar", CPF_VALIDO)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"valor\": 500.00}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.sucesso").value(false));
     }
 
     @Test

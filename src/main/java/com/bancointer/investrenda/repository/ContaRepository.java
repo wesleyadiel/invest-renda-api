@@ -26,4 +26,8 @@ public interface ContaRepository extends JpaRepository<Conta, UUID> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select c from Conta c where c.id = :id")
     Optional<Conta> buscarPorIdParaAtualizacao(UUID id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select c from Conta c where c.cpf = :cpf")
+    Optional<Conta> buscarPorCpfParaAtualizacao(String cpf);
 }

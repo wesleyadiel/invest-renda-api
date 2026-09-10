@@ -1,6 +1,7 @@
 package com.bancointer.investrenda.controller;
 
 import com.bancointer.investrenda.dto.RequisicaoConta;
+import com.bancointer.investrenda.dto.RequisicaoDeposito;
 import com.bancointer.investrenda.dto.RespostaApi;
 import com.bancointer.investrenda.dto.RespostaConta;
 import com.bancointer.investrenda.service.ContaService;
@@ -59,6 +60,26 @@ public class ContaController {
             @Parameter(description = "CPF do titular (11 digitos).", example = "11144477735") @PathVariable String cpf) {
         RespostaConta conta = contaService.buscarPorCpf(cpf);
         return ResponseEntity.ok(RespostaApi.criarSucesso(conta, "Conta encontrada"));
+    }
+
+    @Operation(summary = "Depositar na conta",
+            description = "Soma o valor informado ao saldo atual - nao substitui. Util para repor saldo de "
+                    + "uma conta zerada (por exemplo, apos aplicacoes de teste terem debitado tudo) sem "
+                    + "precisar excluir e recriar a conta.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Deposito realizado, saldo atualizado.",
+                    content = @Content(schema = @Schema(implementation = RespostaConta.class))),
+            @ApiResponse(responseCode = "400", description = "Valor ausente, zero ou negativo.", content = @Content(examples = @ExampleObject(value = """
+                    {"sucesso": false, "dados": null, "mensagem": "Erro de validacao",
+                     "erros": ["valor: valor deve ser maior que zero"]}"""))),
+            @ApiResponse(responseCode = "404", description = "Nao existe conta para esse CPF.")
+    })
+    @PostMapping("/{cpf}/depositar")
+    public ResponseEntity<RespostaApi<RespostaConta>> depositar(
+            @Parameter(description = "CPF do titular (11 digitos).", example = "11144477735") @PathVariable String cpf,
+            @Valid @RequestBody RequisicaoDeposito requisicao) {
+        RespostaConta conta = contaService.depositar(cpf, requisicao);
+        return ResponseEntity.ok(RespostaApi.criarSucesso(conta, "Deposito realizado com sucesso"));
     }
 
     @Operation(summary = "Listar contas",
