@@ -1,0 +1,43 @@
+meta {
+  name: Solicitar aplicacao para DLQ
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/aplicacoes
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "cpf": "{{contaCpf}}",
+    "produtoId": "{{produtoId}}",
+    "valor": 150.00
+  }
+}
+
+assert {
+  res.status: eq 202
+  res.body.sucesso: eq true
+}
+
+script:post-response {
+  if (res.body && res.body.dados) {
+    bru.setVar("aplicacaoDlqId", res.body.dados.id);
+  }
+}
+
+docs {
+  Cria uma aplicacao nova (separada da usada em Aplicacoes/Solicitar
+  aplicacao, para nao mexer no `aplicacaoId` que aquela pasta ja
+  capturou) enquanto a simulacao de falha esta ativa - essa mensagem
+  vai falhar 3x (retry do listener) e cair na DLQ. Precisa que
+  01.Produtos e 02.Contas ja tenham rodado (usa `produtoId`/`contaCpf`).
+  Proximo passo: "Aguardar retry (7s)".
+}

@@ -1,0 +1,65 @@
+meta {
+  name: Criar conta
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/contas
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "cpf": "{{novoCpf}}",
+    "nomeTitular": "Cliente Teste Bruno",
+    "saldoInicial": 1000.00
+  }
+}
+
+script:pre-request {
+  // Gera um CPF matematicamente valido (mesmo algoritmo de ValidadorCpf.java)
+  // a cada execucao, para a collection poder rodar varias vezes seguidas
+  // sem colidir com o "cpf ja cadastrado" (409) de uma execucao anterior.
+  function gerarCpfValido() {
+    let digitos;
+    do {
+      digitos = Array.from({ length: 9 }, () => Math.floor(Math.random() * 10));
+    } while (digitos.every((d) => d === digitos[0]));
+
+    const calcularDv = (digs, pesoInicial) => {
+      const soma = digs.reduce((acc, v, i) => acc + v * (pesoInicial - i), 0);
+      const resto = 11 - (soma % 11);
+      return resto >= 10 ? 0 : resto;
+    };
+
+    const dv1 = calcularDv(digitos, 10);
+    const dv2 = calcularDv([...digitos, dv1], 11);
+    return [...digitos, dv1, dv2].join("");
+  }
+
+  bru.setVar("novoCpf", gerarCpfValido());
+}
+
+assert {
+  res.status: eq 201
+  res.body.sucesso: eq true
+}
+
+script:post-response {
+  if (res.body && res.body.dados) {
+    bru.setVar("contaCpf", res.body.dados.cpf);
+    bru.setVar("contaId", res.body.dados.id);
+  }
+}
+
+docs {
+  Gera um CPF novo e valido a cada execucao (script pre-request) - pode
+  rodar essa collection quantas vezes quiser sem tomar 409 "conta ja
+  existe". Guarda `contaCpf`/`contaId` para o resto da collection.
+}

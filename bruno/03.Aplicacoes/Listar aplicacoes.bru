@@ -1,0 +1,21 @@
+meta {
+  name: Listar aplicacoes
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/aplicacoes
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.sucesso: eq true
+}
+
+docs {
+  Ordenada por data de criacao decrescente - `contaCpf`/`produtoNome` ja
+  vem resolvidos, sem precisar cruzar com GET /contas ou GET /produtos.
+}

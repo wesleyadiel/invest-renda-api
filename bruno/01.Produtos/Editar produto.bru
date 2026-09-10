@@ -1,0 +1,38 @@
+meta {
+  name: Editar produto
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/produtos/{{produtoId}}
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "nome": "CDB Banco Inter 120% CDI",
+    "tipo": "CDB",
+    "emissor": "Banco Inter",
+    "classificacaoEmissor": "AA+",
+    "taxaAnual": 14.2,
+    "investimentoMinimo": 100.00,
+    "prazoMeses": 12,
+    "ativo": true
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.sucesso: eq true
+}
+
+docs {
+  PUT substitui a representacao completa - envie todos os campos, nao
+  so o que mudou. Invalida os caches de listagem e de detalhe.
+}

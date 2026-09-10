@@ -1,0 +1,21 @@
+meta {
+  name: Status da integracao
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/integracoes/status
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.sucesso: eq true
+}
+
+docs {
+  Estado do feature toggle, da simulacao de falha e do circuit breaker
+  (CLOSED / OPEN / HALF_OPEN).
+}

@@ -1,0 +1,21 @@
+meta {
+  name: Buscar aplicacao
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/aplicacoes/{{aplicacaoId}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.sucesso: eq true
+}
+
+docs {
+  Use em polling ate `status` sair de PENDENTE (CONCLUIDA ou FALHOU) -
+  nao existe webhook/callback, e assincrono via fila.
+}

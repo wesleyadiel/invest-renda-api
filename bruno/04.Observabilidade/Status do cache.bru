@@ -1,0 +1,23 @@
+meta {
+  name: Status do cache
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseUrl}}/operacoes/cache
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.sucesso: eq true
+}
+
+docs {
+  Consulta ao vivo no Redis - se a listagem de produtos esta cacheada e
+  quais detalhes individuais estao em cache, com o TTL restante de cada
+  um. Rode Produtos/Listar produtos ou Buscar produto antes para ver
+  algo populado aqui.
+}

@@ -1,0 +1,38 @@
+meta {
+  name: Reprocessar DLQ
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/operacoes/fila/dlq/reprocessar
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "aplicacaoId": "{{dlqAplicacaoId}}",
+    "novoValor": 90.00
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.sucesso: eq true
+  res.body.dados.valor: eq 90
+}
+
+docs {
+  Usa `dlqAplicacaoId` (capturado em "Listar DLQ", que por sua vez
+  depende de "Solicitar aplicacao para DLQ" + "Aguardar retry (7s)"
+  terem rodado antes, nessa ordem) - rodando a pasta inteira em
+  sequencia isso encadeia sozinho, sem passo manual. `novoValor` e
+  opcional: aqui ajustamos para 90.00 so para o assert conseguir
+  confirmar que o valor reenviado e o que pedimos (nao o original,
+  150.00) - omita/null para reenviar com o valor original.
+}

@@ -1,0 +1,22 @@
+meta {
+  name: Health check
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/actuator/health
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.status: eq UP
+}
+
+docs {
+  Confere se a API, o Postgres, o Redis e o RabbitMQ estao todos de pe
+  (o health do Actuator agrega os health indicators de cada um) antes de
+  rodar o resto da collection.
+}

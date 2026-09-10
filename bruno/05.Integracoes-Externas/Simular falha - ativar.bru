@@ -1,0 +1,33 @@
+meta {
+  name: Simular falha - ativar
+  type: http
+  seq: 5
+}
+
+put {
+  url: {{baseUrl}}/integracoes/simular-falha
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "ativo": true
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.dados.simulandoFalha: eq true
+}
+
+docs {
+  Com isso ativo, Consultar cotacao dolar falha antes de chamar a API
+  real - deterministico, nao depende de rede. Chame repetidas vezes
+  (10x) para ver o circuit breaker abrir (estadoCircuito muda para OPEN
+  em Status da integracao).
+}

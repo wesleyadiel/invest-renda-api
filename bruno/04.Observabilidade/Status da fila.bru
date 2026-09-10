@@ -1,0 +1,21 @@
+meta {
+  name: Status da fila
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/operacoes/fila
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.sucesso: eq true
+}
+
+docs {
+  Consulta ao vivo no RabbitMQ - mensagens/consumidores na fila principal
+  e na dead-letter queue, mais o estado do toggle de simulacao de falha.
+}

@@ -1,0 +1,23 @@
+meta {
+  name: Consultar cotacao dolar
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/integracoes/cotacao-dolar
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: in [200, 503]
+}
+
+docs {
+  Chama a AwesomeAPI de verdade (economia.awesomeapi.com.br), protegida
+  por retry com backoff exponencial (3 tentativas: 1s, 2s, 4s) e circuit
+  breaker. 200 em condicoes normais; 503 se a integracao estiver
+  desabilitada, a simulacao de falha ativa, ou o circuito aberto - veja
+  "Habilitar integracao" e "Simular falha - ativar".
+}

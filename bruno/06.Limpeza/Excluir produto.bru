@@ -1,0 +1,24 @@
+meta {
+  name: Excluir produto
+  type: http
+  seq: 1
+}
+
+delete {
+  url: {{baseUrl}}/produtos/{{produtoId}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: in [200, 422]
+}
+
+docs {
+  Fica de proposito no final da collection (depois de Aplicacoes), nao
+  em Produtos: se voce rodou Aplicacoes/Solicitar aplicacao no meio do
+  caminho, essa aplicacao referencia o produto e a exclusao volta 422
+  (bloqueada para nao quebrar o historico) - comportamento esperado,
+  nao um erro da collection. So volta 200 se voce pulou a pasta
+  Aplicacoes nessa execucao.
+}

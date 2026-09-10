@@ -1,0 +1,21 @@
+meta {
+  name: Buscar produto
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/produtos/{{produtoId}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.sucesso: eq true
+}
+
+docs {
+  Usa o `produtoId` capturado em Criar produto. Rode Criar produto
+  primeiro se estiver testando isolado.
+}

@@ -1,0 +1,23 @@
+meta {
+  name: Excluir conta
+  type: http
+  seq: 2
+}
+
+delete {
+  url: {{baseUrl}}/contas/{{contaCpf}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: in [200, 422]
+}
+
+docs {
+  Fica de proposito no final da collection (depois de Aplicacoes), nao
+  em Contas: se voce rodou Aplicacoes/Solicitar aplicacao no meio do
+  caminho, essa aplicacao referencia a conta e a exclusao volta 422
+  (bloqueada) - comportamento esperado. So volta 200 se voce pulou a
+  pasta Aplicacoes nessa execucao.
+}

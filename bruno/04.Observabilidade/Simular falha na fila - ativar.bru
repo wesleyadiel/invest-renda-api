@@ -1,0 +1,34 @@
+meta {
+  name: Simular falha na fila - ativar
+  type: http
+  seq: 2
+}
+
+put {
+  url: {{baseUrl}}/operacoes/fila/simular-falha
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "ativo": true
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.dados.simulandoFalha: eq true
+}
+
+docs {
+  Com isso ativo, toda mensagem consumida falha antes de tocar o banco.
+  Rode Aplicacoes/Solicitar aplicacao em seguida, espere ~7s (retry 3x,
+  backoff 1s/2s/4s) e confira Listar DLQ - a mensagem deveria aparecer
+  la. Lembre de rodar "Simular falha na fila - desativar" depois, senao
+  toda aplicacao nova tambem cai na DLQ.
+}

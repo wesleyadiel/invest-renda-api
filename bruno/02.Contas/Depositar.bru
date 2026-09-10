@@ -1,0 +1,31 @@
+meta {
+  name: Depositar
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/contas/{{contaCpf}}/depositar
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "valor": 500.00
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.sucesso: eq true
+}
+
+docs {
+  Soma ao saldo atual (nunca substitui) - util para repor saldo de uma
+  conta zerada. `valor` precisa ser maior que zero.
+}

@@ -1,0 +1,26 @@
+meta {
+  name: Simular falha na fila - desativar
+  type: http
+  seq: 5
+}
+
+put {
+  url: {{baseUrl}}/operacoes/fila/simular-falha
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "ativo": false
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.dados.simulandoFalha: eq false
+}

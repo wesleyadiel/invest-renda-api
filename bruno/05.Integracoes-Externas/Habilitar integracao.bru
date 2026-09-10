@@ -1,0 +1,26 @@
+meta {
+  name: Habilitar integracao
+  type: http
+  seq: 3
+}
+
+put {
+  url: {{baseUrl}}/integracoes/habilitar
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "ativo": true
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.dados.habilitado: eq true
+}

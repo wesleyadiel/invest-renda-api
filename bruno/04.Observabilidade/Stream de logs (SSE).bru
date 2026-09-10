@@ -1,0 +1,34 @@
+meta {
+  name: Stream de logs (SSE)
+  type: http
+  seq: 9
+  tags: [
+    streaming
+  ]
+}
+
+get {
+  url: {{baseUrl}}/operacoes/logs/stream
+  body: none
+  auth: none
+}
+
+headers {
+  Accept: text/event-stream
+}
+
+docs {
+  Conexao Server-Sent Events de duracao indefinida (nao "termina"
+  sozinha) - o Bruno pode nao renderizar isso como uma resposta normal.
+  Envie o request, olhe a aba de resposta por alguns segundos para ver
+  as linhas de log chegando (JSON estruturado, uma por evento), depois
+  cancele manualmente. Para uma experiencia melhor, use a pagina /logs
+  do frontend (invest-renda-web) ou:
+
+  curl -N {{baseUrl}}/operacoes/logs/stream
+
+  Marcado com a tag "streaming" de proposito - rodando a collection
+  inteira pela CLI (bru run -r), exclua este request com
+  --exclude-tags=streaming, senao a execucao fica pendurada esperando
+  ele "terminar".
+}

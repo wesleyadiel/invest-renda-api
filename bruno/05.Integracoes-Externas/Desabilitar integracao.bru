@@ -1,0 +1,33 @@
+meta {
+  name: Desabilitar integracao
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/integracoes/habilitar
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "ativo": false
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.dados.habilitado: eq false
+}
+
+docs {
+  Com desabilitado, Consultar cotacao dolar falha rapido (503) sem
+  contar como falha no circuit breaker - e ignorado de proposito
+  (desligar por escolha nao e a mesma coisa que a integracao estar
+  fora do ar).
+}

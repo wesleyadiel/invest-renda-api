@@ -1,0 +1,6 @@
+{
+  "version": "1",
+  "name": "invest-renda-api",
+  "type": "collection",
+  "ignore": ["node_modules", ".git"]
+}

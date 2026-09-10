@@ -1,0 +1,23 @@
+meta {
+  name: Aguardar retry (7s)
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/actuator/health
+  body: none
+  auth: none
+}
+
+script:post-response {
+  await bru.sleep(7000);
+}
+
+docs {
+  Nao testa nada por si so (so bate no health check, barato) - o
+  proposito real e o `await bru.sleep(7000)` no post-response: da tempo
+  do retry do listener se esgotar (3 tentativas, backoff 1s/2s/4s = ~7s
+  no total) antes do proximo passo tentar ver a mensagem na DLQ. Sem
+  isso, "Listar DLQ" rodaria cedo demais e a acharia vazia.
+}

@@ -1,0 +1,21 @@
+meta {
+  name: Listar produtos
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/produtos
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.sucesso: eq true
+}
+
+docs {
+  Passa por cache Redis (chave `produtos`, TTL 10 min) - veja o TTL em
+  Observabilidade/Status do cache.
+}

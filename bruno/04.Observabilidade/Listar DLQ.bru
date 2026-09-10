@@ -1,0 +1,29 @@
+meta {
+  name: Listar DLQ
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/operacoes/fila/dlq
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.sucesso: eq true
+}
+
+script:post-response {
+  if (res.body && res.body.dados && res.body.dados.length > 0) {
+    bru.setVar("dlqAplicacaoId", res.body.dados[0].aplicacaoId);
+  }
+}
+
+docs {
+  Espia (peek, nao remove) ate 50 mensagens presas na DLQ. Rodando a
+  pasta em sequencia, a aplicacao criada em "Solicitar aplicacao para
+  DLQ" ja deveria estar aqui a essa altura. Captura o `aplicacaoId` do
+  primeiro item em `dlqAplicacaoId` para Reprocessar DLQ.
+}

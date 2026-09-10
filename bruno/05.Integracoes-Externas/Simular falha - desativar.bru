@@ -1,0 +1,26 @@
+meta {
+  name: Simular falha - desativar
+  type: http
+  seq: 6
+}
+
+put {
+  url: {{baseUrl}}/integracoes/simular-falha
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "ativo": false
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.dados.simulandoFalha: eq false
+}
