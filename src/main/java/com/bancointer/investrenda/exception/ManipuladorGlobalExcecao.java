@@ -5,9 +5,11 @@ import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.io.IOException;
 import java.util.List;
@@ -49,6 +51,25 @@ public class ManipuladorGlobalExcecao {
     public ResponseEntity<RespostaApi<Object>> tratarViolacaoConstraint(ConstraintViolationException ex) {
         return ResponseEntity.badRequest()
                 .body(RespostaApi.criarErro(ex.getMessage()));
+    }
+
+    // Sem estes dois, "id" invalido num @PathVariable UUID ou num campo UUID
+    // do corpo JSON cairia no catch-all de Exception abaixo e voltaria 500 -
+    // o handler generico "engole" os 400 que o Spring devolveria sozinho por
+    // padrao para esses dois casos, entao precisam de tratamento explicito
+    // aqui para o cliente continuar recebendo 400 (erro dele) e nao 500
+    // (que sugeriria bug do servidor).
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<RespostaApi<Object>> tratarTipoArgumentoInvalido(MethodArgumentTypeMismatchException ex) {
+        return ResponseEntity.badRequest()
+                .body(RespostaApi.criarErro(ex.getName() + ": valor invalido '" + ex.getValue() + "'"));
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<RespostaApi<Object>> tratarCorpoInvalido(HttpMessageNotReadableException ex) {
+        Throwable causa = ex.getMostSpecificCause();
+        return ResponseEntity.badRequest()
+                .body(RespostaApi.criarErro("Corpo da requisicao invalido: " + (causa != null ? causa.getMessage() : ex.getMessage())));
     }
 
     @ExceptionHandler(IntegracaoExternaException.class)

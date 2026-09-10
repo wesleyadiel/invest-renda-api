@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -147,6 +148,17 @@ class OperacoesControllerTest {
                         .content("{\"aplicacaoId\": \"" + aplicacaoId + "\"}"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.sucesso").value(false));
+    }
+
+    @Test
+    void deveRetornarBadRequestQuandoAplicacaoIdNoCorpoNaoEUuidValido() throws Exception {
+        mockMvc.perform(post("/operacoes/fila/dlq/reprocessar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"aplicacaoId\": \"nao-e-um-uuid\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.sucesso").value(false));
+
+        verifyNoInteractions(servicoFilaMorta);
     }
 
     @Test

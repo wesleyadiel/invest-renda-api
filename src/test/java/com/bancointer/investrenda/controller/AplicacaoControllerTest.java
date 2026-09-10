@@ -100,6 +100,15 @@ class AplicacaoControllerTest {
     }
 
     @Test
+    void deveRetornarBadRequestQuandoIdNaoEUuidValido() throws Exception {
+        mockMvc.perform(get("/aplicacoes/{id}", "nao-e-um-uuid"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.sucesso").value(false));
+
+        verifyNoInteractions(aplicacaoService);
+    }
+
+    @Test
     void deveRetornarNaoEncontradoQuandoAplicacaoNaoExiste() throws Exception {
         UUID id = UUID.randomUUID();
         when(aplicacaoService.buscarPorId(id)).thenThrow(new NaoEncontradoException("Aplicacao nao encontrada: " + id));
