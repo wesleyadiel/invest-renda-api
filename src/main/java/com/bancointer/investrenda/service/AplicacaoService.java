@@ -72,12 +72,12 @@ public class AplicacaoService {
         MensagemAplicacaoSolicitada mensagem = new MensagemAplicacaoSolicitada(
                 aplicacao.getId(), conta.getId(), produto.getId(), requisicao.valor());
 
-        rabbitTemplate.convertAndSend(nomeExchange, chaveRoteamento, mensagem);
-
         log.info("Aplicacao solicitada e publicada na fila",
                 kv("aplicacaoId", aplicacao.getId()), kv("contaId", conta.getId()),
                 kv("produtoId", produto.getId()), kv("valor", requisicao.valor()));
 
+
+        rabbitTemplate.convertAndSend(nomeExchange, chaveRoteamento, mensagem);
         return RespostaAplicacao.from(aplicacao);
     }
 

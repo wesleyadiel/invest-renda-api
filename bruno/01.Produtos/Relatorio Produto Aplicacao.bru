@@ -1,0 +1,25 @@
+meta {
+  name: Relatorio Produto Aplicacao
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/produtos/{{produtoId}}/relatorio
+  body: none
+  auth: none
+}
+
+vars:pre-request {
+  produtoId: 863cbbcd-8c26-486e-a6b7-f33a42a58be2
+}
+
+assert {
+  res.status: eq 200
+  res.body.sucesso: eq true
+}
+
+docs {
+  Usa o `produtoId` capturado em Criar produto. Rode Criar produto
+  primeiro se estiver testando isolado.
+}

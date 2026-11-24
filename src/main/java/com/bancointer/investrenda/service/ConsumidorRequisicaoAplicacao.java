@@ -5,6 +5,7 @@ import com.bancointer.investrenda.domain.Conta;
 import com.bancointer.investrenda.domain.Produto;
 import com.bancointer.investrenda.domain.enums.StatusAplicacao;
 import com.bancointer.investrenda.exception.FalhaProcessamentoAplicacaoException;
+import com.bancointer.investrenda.exception.SaldoInsuficienteException;
 import com.bancointer.investrenda.messaging.MensagemAplicacaoSolicitada;
 import com.bancointer.investrenda.repository.AplicacaoRepository;
 import com.bancointer.investrenda.repository.ContaRepository;
@@ -69,11 +70,13 @@ public class ConsumidorRequisicaoAplicacao {
         aplicacao.setValor(mensagem.valor());
 
         if (!conta.temSaldoSuficiente(mensagem.valor())) {
-            aplicacao.setStatus(StatusAplicacao.FALHOU);
-            aplicacao.setMotivoFalha("Saldo insuficiente na conta");
-            aplicacaoRepository.save(aplicacao);
-            log.warn("Aplicacao falhou: saldo insuficiente", kv("contaId", conta.getId()), kv("valor", mensagem.valor()));
-            return;
+
+            throw new SaldoInsuficienteException("Saldo insuficiente");
+//            aplicacao.setStatus(StatusAplicacao.FALHOU);
+//            aplicacao.setMotivoFalha("Saldo insuficiente na conta");
+//            aplicacaoRepository.save(aplicacao);
+//            log.warn("Aplicacao falhou: saldo insuficiente", kv("contaId", conta.getId()), kv("valor", mensagem.valor()));
+//            return;
         }
 
         conta.debitar(mensagem.valor());

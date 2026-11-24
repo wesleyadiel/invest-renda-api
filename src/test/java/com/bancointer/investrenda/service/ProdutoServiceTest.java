@@ -1,9 +1,13 @@
 package com.bancointer.investrenda.service;
 
+import com.bancointer.investrenda.domain.Aplicacao;
+import com.bancointer.investrenda.domain.Conta;
 import com.bancointer.investrenda.domain.Produto;
+import com.bancointer.investrenda.domain.enums.StatusAplicacao;
 import com.bancointer.investrenda.domain.enums.TipoProduto;
 import com.bancointer.investrenda.dto.RequisicaoProduto;
 import com.bancointer.investrenda.dto.RespostaDetalheProduto;
+import com.bancointer.investrenda.dto.RespostaRelatorioProduto;
 import com.bancointer.investrenda.exception.NaoEncontradoException;
 import com.bancointer.investrenda.exception.NegocioException;
 import com.bancointer.investrenda.repository.AplicacaoRepository;
@@ -15,6 +19,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -101,5 +106,97 @@ class ProdutoServiceTest {
                 .isInstanceOf(NegocioException.class);
 
         verify(produtoRepository, never()).delete(any(Produto.class));
+    }
+
+    private Produto produtoTeste(UUID id) {
+        return Produto.builder()
+                .id(id).nome("CDB Teste").tipo(TipoProduto.CDB).emissor("Banco X")
+                .classificacaoEmissor("AA").taxaAnual(new BigDecimal("12.50"))
+                .investimentoMinimo(new BigDecimal("100.00")).prazoMeses(12).ativo(true)
+                .build();
+    }
+
+    private Aplicacao aplicacaoTeste(UUID id, Produto produto) {
+        Conta conta = Conta.builder().id(UUID.randomUUID()).cpf("11144477735")
+                .nomeTitular("Cliente Teste").saldo(new BigDecimal("1000.00")).build();
+        return Aplicacao.builder()
+                .id(id).conta(conta).produto(produto).valor(new BigDecimal("300.00"))
+                .status(StatusAplicacao.CONCLUIDA).build();
+    }
+
+    @Test
+    void deveGerarRelatorioComAplicacoesDoProduto() {
+        UUID produtoId = UUID.randomUUID();
+        Produto produto = produtoTeste(produtoId);
+        Aplicacao aplicacao = aplicacaoTeste(UUID.randomUUID(), produto);
+
+        when(produtoRepository.findById(produtoId)).thenReturn(Optional.of(produto));
+        when(aplicacaoRepository.buscarPorProdutoIdOrdenadasPorDataCriacaoDesc(produtoId))
+                .thenReturn(List.of(aplicacao));
+
+        RespostaRelatorioProduto relatorio = produtoService.gerarRelatorioAplicacoes(produtoId);
+
+        assertThat(relatorio.produto().id()).isEqualTo(produtoId);
+        assertThat(relatorio.totalAplicacoes()).isEqualTo(1);
+        assertThat(relatorio.aplicacoes()).hasSize(1);
+        assertThat(relatorio.aplicacoes().get(0).produtoId()).isEqualTo(produtoId);
+    }
+
+    @Test
+    void deveGerarRelatorioComListaVaziaQuandoProdutoNaoTemAplicacoes() {
+        UUID produtoId = UUID.randomUUID();
+        Produto produto = produtoTeste(produtoId);
+
+        when(produtoRepository.findById(produtoId)).thenReturn(Optional.of(produto));
+        when(aplicacaoRepository.buscarPorProdutoIdOrdenadasPorDataCriacaoDesc(produtoId))
+                .thenReturn(List.of());
+
+        RespostaRelatorioProduto relatorio = produtoService.gerarRelatorioAplicacoes(produtoId);
+
+        assertThat(relatorio.totalAplicacoes()).isZero();
+        assertThat(relatorio.aplicacoes()).isEmpty();
+    }
+
+    @Test
+    void deveLancarNaoEncontradoAoGerarRelatorioDeProdutoInexistente() {
+        UUID produtoId = UUID.randomUUID();
+        when(produtoRepository.findById(produtoId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> produtoService.gerarRelatorioAplicacoes(produtoId))
+                .isInstanceOf(NaoEncontradoException.class);
+
+        verify(aplicacaoRepository, never()).buscarPorProdutoIdOrdenadasPorDataCriacaoDesc(any(UUID.class));
+    }
+
+    @Test
+    void deveLancarInconsistenciaQuandoAplicacaoRetornadaPertenceAOutroProduto() {
+        UUID produtoId = UUID.randomUUID();
+        Produto produtoBuscado = produtoTeste(produtoId);
+        Produto outroProduto = produtoTeste(UUID.randomUUID());
+        Aplicacao aplicacaoDeOutroProduto = aplicacaoTeste(UUID.randomUUID(), outroProduto);
+
+        when(produtoRepository.findById(produtoId)).thenReturn(Optional.of(produtoBuscado));
+        when(aplicacaoRepository.buscarPorProdutoIdOrdenadasPorDataCriacaoDesc(produtoId))
+                .thenReturn(List.of(aplicacaoDeOutroProduto));
+
+        assertThatThrownBy(() -> produtoService.gerarRelatorioAplicacoes(produtoId))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining(produtoId.toString())
+                .hasMessageContaining(outroProduto.getId().toString());
+    }
+
+    @Test
+    void deveLancarInconsistenciaQuandoAplicacaoRetornadaNaoTemProdutoAssociado() {
+        UUID produtoId = UUID.randomUUID();
+        Produto produtoBuscado = produtoTeste(produtoId);
+        Aplicacao aplicacaoSemProduto = aplicacaoTeste(UUID.randomUUID(), null);
+
+        when(produtoRepository.findById(produtoId)).thenReturn(Optional.of(produtoBuscado));
+        when(aplicacaoRepository.buscarPorProdutoIdOrdenadasPorDataCriacaoDesc(produtoId))
+                .thenReturn(List.of(aplicacaoSemProduto));
+
+        assertThatThrownBy(() -> produtoService.gerarRelatorioAplicacoes(produtoId))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining(produtoId.toString());
     }
 }

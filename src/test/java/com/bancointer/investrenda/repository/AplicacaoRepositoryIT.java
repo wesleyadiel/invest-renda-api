@@ -114,4 +114,67 @@ class AplicacaoRepositoryIT {
         assertThat(aplicacaoRepository.existePorContaId(conta.getId())).isTrue();
         assertThat(aplicacaoRepository.existePorProdutoId(produto.getId())).isTrue();
     }
+
+    @Test
+    void deveBuscarSomenteAplicacoesDoProdutoInformadoOrdenadasPorDataCriacaoDesc() throws InterruptedException {
+        Conta conta = contaRepository.saveAndFlush(Conta.builder()
+                .cpf("11144477735").nomeTitular("Cliente Relatorio").saldo(new BigDecimal("1000.00")).build());
+
+        Produto produtoAlvo = produtoRepository.saveAndFlush(Produto.builder()
+                .nome("CDB Alvo").tipo(TipoProduto.CDB).emissor("Banco X").classificacaoEmissor("AA")
+                .taxaAnual(new BigDecimal("12.00")).investimentoMinimo(new BigDecimal("100.00"))
+                .prazoMeses(12).ativo(true).build());
+
+        Produto outroProduto = produtoRepository.saveAndFlush(Produto.builder()
+                .nome("CDB Outro").tipo(TipoProduto.CDB).emissor("Banco Y").classificacaoEmissor("AA")
+                .taxaAnual(new BigDecimal("11.00")).investimentoMinimo(new BigDecimal("100.00"))
+                .prazoMeses(6).ativo(true).build());
+
+        Aplicacao doProdutoAlvo1 = aplicacaoRepository.saveAndFlush(Aplicacao.builder()
+                .conta(conta).produto(produtoAlvo).valor(new BigDecimal("100.00"))
+                .status(StatusAplicacao.CONCLUIDA).build());
+
+        aplicacaoRepository.saveAndFlush(Aplicacao.builder()
+                .conta(conta).produto(outroProduto).valor(new BigDecimal("500.00"))
+                .status(StatusAplicacao.CONCLUIDA).build());
+
+        Thread.sleep(5); // garante criadoEm distinto entre as duas aplicacoes do produto alvo
+
+        Aplicacao doProdutoAlvo2 = aplicacaoRepository.saveAndFlush(Aplicacao.builder()
+                .conta(conta).produto(produtoAlvo).valor(new BigDecimal("200.00"))
+                .status(StatusAplicacao.PENDENTE).build());
+
+        List<Aplicacao> aplicacoes =
+                aplicacaoRepository.buscarPorProdutoIdOrdenadasPorDataCriacaoDesc(produtoAlvo.getId());
+
+        // Confirma que a query nao vaza aplicacao de outro produto (o codigo
+        // do produto de cada aplicacao retornada bate com o codigo buscado)
+        // e que a ordenacao mais recente primeiro e respeitada.
+        assertThat(aplicacoes).hasSize(2);
+        assertThat(aplicacoes).allMatch(a -> a.getProduto().getId().equals(produtoAlvo.getId()));
+        assertThat(aplicacoes.get(0).getId()).isEqualTo(doProdutoAlvo2.getId());
+        assertThat(aplicacoes.get(1).getId()).isEqualTo(doProdutoAlvo1.getId());
+    }
+
+    @Test
+    void deveExporAplicacoesDoLadoInversoDoOneToManyEmProduto() {
+        Conta conta = contaRepository.saveAndFlush(Conta.builder()
+                .cpf("52998224725").nomeTitular("Cliente Bidirecional").saldo(new BigDecimal("1000.00")).build());
+
+        Produto produto = produtoRepository.saveAndFlush(Produto.builder()
+                .nome("CDB Bidirecional").tipo(TipoProduto.CDB).emissor("Banco X").classificacaoEmissor("AA")
+                .taxaAnual(new BigDecimal("12.00")).investimentoMinimo(new BigDecimal("100.00"))
+                .prazoMeses(12).ativo(true).build());
+
+        Aplicacao aplicacao = aplicacaoRepository.saveAndFlush(Aplicacao.builder()
+                .conta(conta).produto(produto).valor(new BigDecimal("100.00"))
+                .status(StatusAplicacao.CONCLUIDA).build());
+
+        // mappedBy = "produto": Aplicacao continua sendo a dona do
+        // relacionamento (quem tem a FK "produto_id"), entao um saveAndFlush
+        // de Aplicacao nao deve gerar nenhum UPDATE extra em "produto" so
+        // para "confirmar" a FK do lado do OneToMany.
+        Produto recarregado = produtoRepository.findById(produto.getId()).orElseThrow();
+        assertThat(recarregado.getAplicacoes()).extracting(Aplicacao::getId).containsExactly(aplicacao.getId());
+    }
 }

@@ -20,7 +20,7 @@ Mockito puro (sem subir Spring context, sem infraestrutura real).
 
 | Classe testada | Arquivo de teste | Cobre |
 |---|---|---|
-| `ProdutoService` | `ProdutoServiceTest` | criação com `ativo` default, produto não encontrado |
+| `ProdutoService` | `ProdutoServiceTest` | criação com `ativo` default, produto não encontrado, relatório de aplicações (com/sem aplicações, 404, e inconsistência quando uma aplicação retornada referencia outro produto ou nenhum produto) |
 | `ContaService` | `ContaServiceTest` | saldo inicial default/informado, CPF duplicado, conta não encontrada, listagem |
 | `AplicacaoService` | `AplicacaoServiceTest` | publicação na fila quando válido, rejeição quando valor abaixo do mínimo |
 | `ConsumidorRequisicaoAplicacao` | `ConsumidorRequisicaoAplicacaoTest` | conclusão com débito de saldo, falha por saldo insuficiente (sem debitar), idempotência (mensagem duplicada ignorada) |
@@ -32,7 +32,7 @@ Mockito puro (sem subir Spring context, sem infraestrutura real).
 
 | Controller testado | Arquivo de teste | Cobre |
 |---|---|---|
-| `ProdutoController` | `ProdutoControllerTest` | criar/atualizar/listar/detalhe, validação de payload (400 com `erros`), 404 traduzido pelo handler |
+| `ProdutoController` | `ProdutoControllerTest` | criar/atualizar/listar/detalhe, validação de payload (400 com `erros`), 404 traduzido pelo handler, relatório de aplicações (200 com/sem aplicações, 404, `id` malformado, 500 quando o service detecta inconsistência de dados) |
 | `ContaController` | `ContaControllerTest` | criar/buscar/listar, CPF matematicamente inválido rejeitado antes de chegar no service, 409 (CPF duplicado) |
 | `AplicacaoController` | `AplicacaoControllerTest` | aplicar (202 + `Location`), 422 (regra de negócio), buscar/listar |
 | `OperacoesController` | `OperacoesControllerTest` | `/operacoes/fila` e `/operacoes/cache` com `AmqpAdmin`/`StringRedisTemplate` mockados diretamente (não tem service próprio) |
@@ -46,6 +46,11 @@ customizadas do projeto que um repositório mockado nunca executa de fato:
 - `AplicacaoRepository.buscarTodasOrdenadasPorDataCriacaoDesc()` — confirma
   a ordenação e que o `join fetch` realmente evita
   `LazyInitializationException` ao acessar `conta`/`produto` depois.
+- `AplicacaoRepository.buscarPorProdutoIdOrdenadasPorDataCriacaoDesc()` —
+  confirma que o filtro por produto não vaza aplicação de outro produto
+  (usado pelo relatório) e a ordenação. Também confirma, contra Postgres de
+  verdade, que `Produto.aplicacoes` (`@OneToMany(mappedBy = "produto")`)
+  enxerga as aplicações salvas do lado inverso do relacionamento.
 - `ContaRepository.buscarPorIdParaAtualizacao()` — confirma que o lock
   pessimista compila e executa contra Postgres de verdade (o log do
   Hibernate mostra `for no key update` na query).

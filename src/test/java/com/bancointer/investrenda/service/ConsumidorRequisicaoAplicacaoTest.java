@@ -93,6 +93,31 @@ class ConsumidorRequisicaoAplicacaoTest {
     }
 
     @Test
+    void deveFalharAplicacaoQuandoSaldoInsuficiente_ChamadaExterna() {
+        Conta conta = Conta.builder().id(UUID.randomUUID()).cpf("12345678900")
+                .nomeTitular("Cliente").saldo(new BigDecimal("50.00")).build();
+        Produto produto = Produto.builder().id(UUID.randomUUID()).nome("CDB").tipo(TipoProduto.CDB)
+                .emissor("Banco X").classificacaoEmissor("AA").taxaAnual(new BigDecimal("12.00"))
+                .investimentoMinimo(new BigDecimal("100.00")).prazoMeses(6).ativo(true).build();
+        Aplicacao aplicacao = Aplicacao.builder().id(UUID.randomUUID()).conta(conta).produto(produto)
+                .valor(new BigDecimal("300.00")).status(StatusAplicacao.PENDENTE).build();
+
+        MensagemAplicacaoSolicitada mensagem = new MensagemAplicacaoSolicitada(
+                aplicacao.getId(), conta.getId(), produto.getId(), aplicacao.getValor());
+
+        when(aplicacaoRepository.findById(aplicacao.getId())).thenReturn(Optional.of(aplicacao));
+        when(contaRepository.buscarPorIdParaAtualizacao(conta.getId())).thenReturn(Optional.of(conta));
+        when(produtoRepository.findById(produto.getId())).thenReturn(Optional.of(produto));
+
+        consumidor.processar(mensagem);
+
+        assertThat(aplicacao.getStatus()).isEqualTo(StatusAplicacao.FALHOU);
+        assertThat(aplicacao.getMotivoFalha()).isNotBlank();
+        assertThat(conta.getSaldo()).isEqualByComparingTo("50.00");
+        verify(contaRepository, never()).save(any(Conta.class));
+    }
+
+    @Test
     void deveIgnorarMensagemQuandoAplicacaoJaProcessada() {
         Aplicacao aplicacao = Aplicacao.builder().id(UUID.randomUUID())
                 .status(StatusAplicacao.CONCLUIDA).valor(new BigDecimal("100.00")).build();

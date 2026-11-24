@@ -18,6 +18,7 @@ instituição.
 | `investimentoMinimo`  | `BigDecimal` | valor mínimo de aplicação |
 | `prazoMeses`     | `Integer`    | prazo até o vencimento, em meses |
 | `ativo`             | `boolean`    | produto indisponível para novas aplicações se `false` |
+| `aplicacoes`        | `List<Aplicacao>` | `@OneToMany(mappedBy = "produto")`, lado inverso do `@ManyToOne` de `Aplicacao` — `Aplicacao` continua dona da FK; usado pelo relatório `GET /produtos/{id}/relatorio` |
 | `criadoEm`/`atualizadoEm` | `Instant` | gerenciados pelo Hibernate (`@CreationTimestamp`/`@UpdateTimestamp`) |
 
 ## `Conta` (tabela `conta`)

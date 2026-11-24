@@ -12,6 +12,8 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -51,6 +53,14 @@ public class Produto {
 
     @Column(nullable = false)
     private boolean ativo;
+
+    // mappedBy porque Aplicacao ja e dona do relacionamento (@ManyToOne +
+    // @JoinColumn "produto_id"); sem mappedBy o Hibernate tratava os dois
+    // lados como donos da mesma coluna, gerando um UPDATE extra e
+    // desnecessario a cada Aplicacao salva so para "confirmar" a FK.
+    @OneToMany(mappedBy = "produto", fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<Aplicacao> aplicacoes = new ArrayList<>();
 
     @CreationTimestamp
     @Column(name = "criado_em", nullable = false, updatable = false)

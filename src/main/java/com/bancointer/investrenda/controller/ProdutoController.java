@@ -3,6 +3,7 @@ package com.bancointer.investrenda.controller;
 import com.bancointer.investrenda.dto.RequisicaoProduto;
 import com.bancointer.investrenda.dto.RespostaApi;
 import com.bancointer.investrenda.dto.RespostaDetalheProduto;
+import com.bancointer.investrenda.dto.RespostaRelatorioProduto;
 import com.bancointer.investrenda.dto.RespostaResumoProduto;
 import com.bancointer.investrenda.service.ProdutoService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -88,6 +89,22 @@ public class ProdutoController {
             @Parameter(description = "Identificador do produto.") @PathVariable UUID id) {
         RespostaDetalheProduto produto = produtoService.buscarDetalhe(id);
         return ResponseEntity.ok(RespostaApi.criarSucesso(produto, "Produto encontrado"));
+    }
+
+    @Operation(summary = "Relatorio de aplicacoes do produto",
+            description = "Traz o produto junto com todas as aplicacoes (compras) que ja o utilizaram, mais "
+                    + "recentes primeiro. Nao passa por cache - o status de cada aplicacao pode mudar a "
+                    + "qualquer momento de forma assincrona.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Relatorio gerado (lista de aplicacoes pode vir vazia).",
+                    content = @Content(schema = @Schema(implementation = RespostaRelatorioProduto.class))),
+            @ApiResponse(responseCode = "404", description = "Produto nao encontrado.")
+    })
+    @GetMapping("/{id}/relatorio")
+    public ResponseEntity<RespostaApi<RespostaRelatorioProduto>> gerarRelatorioAplicacoes(
+            @Parameter(description = "Identificador do produto.") @PathVariable UUID id) {
+        RespostaRelatorioProduto relatorio = produtoService.gerarRelatorioAplicacoes(id);
+        return ResponseEntity.ok(RespostaApi.criarSucesso(relatorio, "Relatorio gerado com sucesso"));
     }
 
     @Operation(summary = "Excluir produto",

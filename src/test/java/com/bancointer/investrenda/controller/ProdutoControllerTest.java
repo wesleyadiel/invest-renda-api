@@ -1,8 +1,11 @@
 package com.bancointer.investrenda.controller;
 
+import com.bancointer.investrenda.domain.enums.StatusAplicacao;
 import com.bancointer.investrenda.domain.enums.TipoProduto;
+import com.bancointer.investrenda.dto.RespostaAplicacao;
 import com.bancointer.investrenda.dto.RespostaDetalheProduto;
 import com.bancointer.investrenda.dto.RequisicaoProduto;
+import com.bancointer.investrenda.dto.RespostaRelatorioProduto;
 import com.bancointer.investrenda.dto.RespostaResumoProduto;
 import com.bancointer.investrenda.exception.NaoEncontradoException;
 import com.bancointer.investrenda.exception.NegocioException;
@@ -151,6 +154,76 @@ class ProdutoControllerTest {
 
         mockMvc.perform(get("/produtos/{id}", id))
                 .andExpect(status().isNotFound());
+    }
+
+    private RespostaAplicacao respostaAplicacao(UUID produtoId) {
+        return new RespostaAplicacao(UUID.randomUUID(), UUID.randomUUID(), "11144477735",
+                produtoId, "CDB Teste", new BigDecimal("300.00"), StatusAplicacao.CONCLUIDA,
+                null, new BigDecimal("12.50"), null, Instant.now());
+    }
+
+    @Test
+    void deveGerarRelatorioDeAplicacoesDoProduto() throws Exception {
+        UUID id = UUID.randomUUID();
+        RespostaRelatorioProduto relatorio = new RespostaRelatorioProduto(
+                respostaDetalhe(id), 1, List.of(respostaAplicacao(id)));
+        when(produtoService.gerarRelatorioAplicacoes(id)).thenReturn(relatorio);
+
+        mockMvc.perform(get("/produtos/{id}/relatorio", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sucesso").value(true))
+                .andExpect(jsonPath("$.dados.produto.id").value(id.toString()))
+                .andExpect(jsonPath("$.dados.totalAplicacoes").value(1))
+                .andExpect(jsonPath("$.dados.aplicacoes[0].produtoId").value(id.toString()));
+    }
+
+    @Test
+    void deveGerarRelatorioComListaVaziaQuandoProdutoNaoTemAplicacoes() throws Exception {
+        UUID id = UUID.randomUUID();
+        RespostaRelatorioProduto relatorio = new RespostaRelatorioProduto(respostaDetalhe(id), 0, List.of());
+        when(produtoService.gerarRelatorioAplicacoes(id)).thenReturn(relatorio);
+
+        mockMvc.perform(get("/produtos/{id}/relatorio", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sucesso").value(true))
+                .andExpect(jsonPath("$.dados.totalAplicacoes").value(0))
+                .andExpect(jsonPath("$.dados.aplicacoes").isEmpty());
+    }
+
+    @Test
+    void deveRetornarNaoEncontradoAoGerarRelatorioDeProdutoInexistente() throws Exception {
+        UUID id = UUID.randomUUID();
+        when(produtoService.gerarRelatorioAplicacoes(id))
+                .thenThrow(new NaoEncontradoException("Produto nao encontrado: " + id));
+
+        mockMvc.perform(get("/produtos/{id}/relatorio", id))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.sucesso").value(false))
+                .andExpect(jsonPath("$.mensagem").value("Produto nao encontrado: " + id));
+    }
+
+    @Test
+    void deveRetornarErroInternoQuandoRelatorioTemAplicacaoDeOutroProduto() throws Exception {
+        UUID id = UUID.randomUUID();
+        UUID produtoDivergente = UUID.randomUUID();
+        when(produtoService.gerarRelatorioAplicacoes(id))
+                .thenThrow(new IllegalStateException("Inconsistencia de dados no relatorio do produto " + id
+                        + ": aplicacao " + UUID.randomUUID() + " referencia o produto " + produtoDivergente));
+
+        mockMvc.perform(get("/produtos/{id}/relatorio", id))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.sucesso").value(false))
+                .andExpect(jsonPath("$.dados").doesNotExist())
+                .andExpect(jsonPath("$.mensagem").value(org.hamcrest.Matchers.containsString(id.toString())));
+    }
+
+    @Test
+    void deveRetornarErroDeIdInvalidoAoGerarRelatorioComPathVariableMalFormado() throws Exception {
+        mockMvc.perform(get("/produtos/{id}/relatorio", "nao-e-um-uuid"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.sucesso").value(false));
+
+        verifyNoInteractions(produtoService);
     }
 
     @Test

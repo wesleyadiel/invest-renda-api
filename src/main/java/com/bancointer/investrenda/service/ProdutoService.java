@@ -1,9 +1,11 @@
 package com.bancointer.investrenda.service;
 
 import com.bancointer.investrenda.config.ConfiguracaoCacheRedis;
+import com.bancointer.investrenda.domain.Aplicacao;
 import com.bancointer.investrenda.domain.Produto;
 import com.bancointer.investrenda.dto.RequisicaoProduto;
 import com.bancointer.investrenda.dto.RespostaDetalheProduto;
+import com.bancointer.investrenda.dto.RespostaRelatorioProduto;
 import com.bancointer.investrenda.dto.RespostaResumoProduto;
 import com.bancointer.investrenda.exception.NaoEncontradoException;
 import com.bancointer.investrenda.exception.NegocioException;
@@ -90,6 +92,33 @@ public class ProdutoService {
     @Transactional(readOnly = true)
     public RespostaDetalheProduto buscarDetalhe(UUID id) {
         return RespostaDetalheProduto.from(buscarEntidadePorId(id));
+    }
+
+    // Relatorio, nao passa por cache: mistura dado de baixa volatilidade
+    // (produto) com dado que muda a todo instante (status das aplicacoes,
+    // inclusive as ainda PENDENTE sendo processadas pelo consumer da fila).
+    @Transactional(readOnly = true)
+    public RespostaRelatorioProduto gerarRelatorioAplicacoes(UUID id) {
+        Produto produto = buscarEntidadePorId(id);
+        List<Aplicacao> aplicacoes = aplicacaoRepository.buscarPorProdutoIdOrdenadasPorDataCriacaoDesc(id);
+        validarAplicacoesPertencemAoProduto(id, aplicacoes);
+        return RespostaRelatorioProduto.from(produto, aplicacoes);
+    }
+
+    // Checagem defensiva: o filtro "where a.produto.id = :produtoId" ja
+    // garante isso na query, mas o relatorio existe justamente para
+    // auditoria/conciliacao, entao preferimos falhar alto (500, mensagem
+    // exposta pelo ManipuladorGlobalExcecao) a devolver silenciosamente uma
+    // aplicacao de outro produto no relatorio - por exemplo se alguem no
+    // futuro alterar essa query e esquecer o filtro.
+    private void validarAplicacoesPertencemAoProduto(UUID produtoId, List<Aplicacao> aplicacoes) {
+        for (Aplicacao aplicacao : aplicacoes) {
+            UUID produtoIdDaAplicacao = aplicacao.getProduto() != null ? aplicacao.getProduto().getId() : null;
+            if (!produtoId.equals(produtoIdDaAplicacao)) {
+                throw new IllegalStateException("Inconsistencia de dados no relatorio do produto " + produtoId
+                        + ": aplicacao " + aplicacao.getId() + " referencia o produto " + produtoIdDaAplicacao);
+            }
+        }
     }
 
     protected Produto buscarEntidadePorId(UUID id) {

@@ -145,6 +145,37 @@ Passa por cache Redis (chave `produtos`, TTL 10 min).
 `404` se não existir. Passa por cache Redis (chave `produto::{id}`,
 TTL 10 min).
 
+### `GET /produtos/{id}/relatorio` — relatório de aplicações do produto
+
+Traz o produto (`produto`) junto com todas as aplicações que já o
+utilizaram (`aplicacoes`, mesmo formato do `GET /aplicacoes/{id}`), mais
+recentes primeiro, e a contagem (`totalAplicacoes`). `404` se o produto não
+existir; `aplicacoes` vem vazia (não 404) se o produto existe mas nunca foi
+aplicado. **Não** passa por cache — mistura o produto (baixa volatilidade)
+com o status de cada aplicação, que muda de forma assíncrona.
+
+```json
+{
+  "sucesso": true,
+  "dados": {
+    "produto": { "id": "78b95996-...", "nome": "CDB Banco Inter 120% CDI", "...": "..." },
+    "totalAplicacoes": 2,
+    "aplicacoes": [
+      { "id": "38d604dc-...", "produtoId": "78b95996-...", "status": "CONCLUIDA", "...": "..." }
+    ]
+  },
+  "mensagem": "Relatorio gerado com sucesso",
+  "erros": []
+}
+```
+
+Implementado com `@OneToMany(mappedBy = "produto")` em `Produto` (lado
+inverso do `@ManyToOne` já existente em `Aplicacao`) — `ProdutoService`
+busca as aplicações via `AplicacaoRepository` e valida, antes de montar a
+resposta, que o `produtoId` de cada aplicação retornada bate com o `id`
+buscado; uma divergência aí é tratada como bug (500, não silenciada) em vez
+de vazar dado de outro produto no relatório.
+
 ### `DELETE /produtos/{id}` — excluir produto
 
 `200 OK`, `dados` = `null`. Invalida os mesmos caches do `PUT`. `404` se o

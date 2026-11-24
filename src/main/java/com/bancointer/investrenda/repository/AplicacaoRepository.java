@@ -17,4 +17,8 @@ public interface AplicacaoRepository extends JpaRepository<Aplicacao, UUID> {
 
     @Query("select case when count(a) > 0 then true else false end from Aplicacao a where a.produto.id = :produtoId")
     boolean existePorProdutoId(UUID produtoId);
+
+    @Query("select a from Aplicacao a join fetch a.conta join fetch a.produto "
+            + "where a.produto.id = :produtoId order by a.criadoEm desc")
+    List<Aplicacao> buscarPorProdutoIdOrdenadasPorDataCriacaoDesc(UUID produtoId);
 }

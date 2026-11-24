@@ -44,6 +44,7 @@ services:
 
 volumes:
   invest_renda_pgdata:
+    name: invest_renda_pgdata
 
 networks:
   default:
